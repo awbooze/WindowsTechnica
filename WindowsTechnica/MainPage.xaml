@@ -1,0 +1,65 @@
+﻿<Page
+    x:Class="WindowsTechnica.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	mc:Ignorable="d">
+
+	<!-- Declare the shared flyout as a resource -->
+	<Page.Resources>
+		<Flyout x:Key="CopyFlyout" Placement="Top">
+			<StackPanel>
+				<TextBlock Style="{StaticResource BaseTextBlockStyle}" Text="URL copied"></TextBlock>
+			</StackPanel>
+		</Flyout>
+	</Page.Resources>
+
+	<!-- Normal content -->
+	<RelativePanel Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+		<CommandBar x:Name="commandBar" VerticalAlignment="Bottom" IsOpen="False"
+                    RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True"
+					Loaded="CommandBar_Loaded">
+			<CommandBar.Content>
+				<TextBlock x:Name="titleBar" Text="arstechnica.com/" TextWrapping="NoWrap" FontSize="16" Margin="10,10,10,10" 
+						   TextTrimming="WordEllipsis" VerticalAlignment="Center" HorizontalAlignment="Left" FontFamily="Segoe UI"
+						   AllowFocusOnInteraction="False" />
+			</CommandBar.Content>
+			<AppBarButton x:Name="BackButton" Icon="Back" Label="Back" ToolTipService.ToolTip="Go back in the page history" 
+						  Click="BackButton_Click" />
+			<AppBarButton x:Name="ForwardButton" Icon="Forward" Label="Forward" ToolTipService.ToolTip="Go forward in the page history"
+						  Click="ForwardButton_Click"/>
+			<AppBarButton x:Name="HomeButton" Icon="Home" Label="Home" ToolTipService.ToolTip="Go to the Ars Technica home page" 
+						  Click="HomeButton_Click"/>
+			<AppBarButton Icon="Refresh" Label="Reload" ToolTipService.ToolTip="Reload the page" Click="RefreshButton_Click"/>
+			<CommandBar.SecondaryCommands>
+				<AppBarButton Icon="Share" Label="Share" ToolTipService.ToolTip="Share the page" Click="ShareButton_Click"/>
+				<AppBarButton x:Name="CopyButton" Icon="Copy" Label="Copy URL" ToolTipService.ToolTip="Copy the URL for the current page" 
+							  Click="CopyButton_Click" FlyoutBase.AttachedFlyout="{StaticResource CopyFlyout}" />
+				<AppBarSeparator x:Name="appBarSeparator"/>
+				<AppBarButton x:Name="SettingsButton" Icon="Setting" Label="Settings" ToolTipService.ToolTip="Go to the Settings screen" 
+							  Click="SettingsButton_Click"/>
+			</CommandBar.SecondaryCommands>
+		</CommandBar>
+
+		<ProgressBar x:Name="ArsProgressBar" Visibility="Visible" IsIndeterminate="True" ShowPaused="True" Background="#1D1B1B"
+                     RelativePanel.Below="ArsWebView"
+					 RelativePanel.AlignHorizontalCenterWith="ArsWebView" RelativePanel.AlignLeftWith="ArsWebView"
+					 RelativePanel.AlignRightWith="ArsWebView" />
+
+		<WebView x:Name="ArsWebView" Source="https://www.arstechnica.com/" Height="auto" Width="auto" MinWidth="360" 
+				 DefaultBackgroundColor="#1D1B1B" IsHitTestVisible ="True"
+                 RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignRightWithPanel="True" 
+				 RelativePanel.AlignLeftWithPanel="True" RelativePanel.Above="commandBar"
+                 NavigationStarting="ArsWebView_NavigationStarting" ContentLoading="ArsWebView_ContentLoading" 
+				 NavigationCompleted="ArsWebView_NavigationCompleted" ContextRequested="ArsWebView_ContextRequested"
+				 UnviewableContentIdentified="ArsWebView_UnviewableContentIdentified">
+			<WebView.ContextFlyout>
+				<MenuFlyout>
+					<MenuFlyoutItem Text="Share" Icon="Share" Click="ShareFlyoutItem_Click"/>
+					<MenuFlyoutItem Text="Copy" Icon="Copy" Click="CopyFlyoutItem_Click"/>
+				</MenuFlyout>
+			</WebView.ContextFlyout>
+		</WebView>
+	</RelativePanel>
+</Page>
