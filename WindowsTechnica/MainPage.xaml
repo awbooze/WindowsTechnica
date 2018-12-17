@@ -17,6 +17,7 @@
 
 	<!-- Normal content -->
 	<RelativePanel Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+		<!-- The default Command Bar -->
 		<CommandBar x:Name="commandBar" VerticalAlignment="Bottom" IsOpen="False"
                     RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True"
 					Loaded="CommandBar_Loaded">
@@ -42,11 +43,13 @@
 			</CommandBar.SecondaryCommands>
 		</CommandBar>
 
+		<!-- The progress bar (only shown when pages are loading) -->
 		<ProgressBar x:Name="ArsProgressBar" Visibility="Visible" IsIndeterminate="True" ShowPaused="True" Background="#1D1B1B"
                      RelativePanel.Below="ArsWebView"
 					 RelativePanel.AlignHorizontalCenterWith="ArsWebView" RelativePanel.AlignLeftWith="ArsWebView"
 					 RelativePanel.AlignRightWith="ArsWebView" />
 
+		<!-- The WebView with initial source -->
 		<WebView x:Name="ArsWebView" Source="https://www.arstechnica.com/" Height="auto" Width="auto" MinWidth="360" 
 				 DefaultBackgroundColor="#1D1B1B" IsHitTestVisible ="True"
                  RelativePanel.AlignTopWithPanel="True" RelativePanel.AlignRightWithPanel="True" 
