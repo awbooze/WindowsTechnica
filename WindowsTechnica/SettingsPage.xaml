@@ -2,17 +2,48 @@
     x:Class="WindowsTechnica.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:WindowsTechnica"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+	Loaded="Page_Loaded">
 
-    <RelativePanel>
+	<RelativePanel>
+		<!-- A ScrollViewer which contains a StackPanel with various settings -->
+		<ScrollViewer VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto" HorizontalScrollMode="Disabled" 
+					  RelativePanel.Above="commandBar" RelativePanel.AlignTopWithPanel="True" 
+					  RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
+			<StackPanel Orientation="Vertical" Margin="24">
+				<TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}"/>
+				<TextBlock Text="WebView" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
+				<TextBox x:Name="HomeUrl" Header="Home URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
+						 HorizontalAlignment="Left" InputScope="Url"/>
+				<TextBlock Text="Theme" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
+				<StackPanel Orientation="Vertical" Margin="0,24,0,0">
+					<TextBlock Text="Choose a mode"/>
+					<RadioButton Content="Light" x:Name="LightRadioButton" Checked="RadioButton_Checked"/>
+					<RadioButton Content="Dark" x:Name="DarkRadioButton" Checked="RadioButton_Checked"/>
+					<RadioButton Content="Windows default" x:Name="DefaultRadioButton" Checked="RadioButton_Checked"/>
+					<HyperlinkButton Content="Windows color settings" NavigateUri="ms-settings:personalization-colors"/>
+				</StackPanel>
+				<TextBlock Text="Developer options" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
+				<TextBox x:Name="CurrentUrl" Header="Current URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
+						 HorizontalAlignment="Left" InputScope="Url"/>
+				<ToggleSwitch x:Name="enableIframesToggle" Header="Inline frames" Margin="0,24,0,0" 
+							  OffContent="Disabled" OnContent="Enabled" Toggled="EnableIframesToggle_Toggled"/>
+				<TextBlock Text="About" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
+				<TextBlock Text="Created by Andrew Booze" Margin="0,12,0,0"/>
+				<TextBlock Text="Licensed under the MIT License" Margin="0,12,0,0"/>
+			</StackPanel>
+		</ScrollViewer>
+		
+		<!-- The Command Bar for this page -->
 		<CommandBar x:Name="commandBar"  VerticalAlignment="Bottom" HorizontalContentAlignment="Center" IsOpen="False"
-                    RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True">
+                    OverflowButtonVisibility="Collapsed" RelativePanel.AlignBottomWithPanel="True" 
+					RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True" >
 			<CommandBar.Content>
-				<TextBlock x:Name="titleBar" Text="Settings" Height="auto" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" TextWrapping="Wrap" FontSize="16" Margin="10,10,10,10"/>
+				<TextBlock x:Name="titleBar" Text="Settings" Height="auto" VerticalAlignment="Stretch" 
+						   HorizontalAlignment="Stretch" TextWrapping="Wrap" FontSize="16" Margin="10,10,10,10"/>
 			</CommandBar.Content>
 		</CommandBar>
 	</RelativePanel>

@@ -4,7 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	mc:Ignorable="d">
+	mc:Ignorable="d"
+	Loaded="Page_Loaded">
 
 	<!-- Declare the shared flyout as a resource -->
 	<Page.Resources>
@@ -17,7 +18,7 @@
 
 	<!-- Normal content -->
 	<RelativePanel Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-		<!-- The default Command Bar -->
+		<!-- The Command Bar for this page -->
 		<CommandBar x:Name="commandBar" VerticalAlignment="Bottom" IsOpen="False"
                     RelativePanel.AlignBottomWithPanel="True" RelativePanel.AlignRightWithPanel="True" RelativePanel.AlignLeftWithPanel="True"
 					Loaded="CommandBar_Loaded">
@@ -30,14 +31,14 @@
 						  Click="BackButton_Click" />
 			<AppBarButton x:Name="ForwardButton" Icon="Forward" Label="Forward" ToolTipService.ToolTip="Go forward in the page history"
 						  Click="ForwardButton_Click"/>
-			<AppBarButton x:Name="HomeButton" Icon="Home" Label="Home" ToolTipService.ToolTip="Go to the Ars Technica home page" 
+			<AppBarButton Icon="Home" Label="Home" ToolTipService.ToolTip="Go to the Ars Technica home page" 
 						  Click="HomeButton_Click"/>
 			<AppBarButton Icon="Refresh" Label="Reload" ToolTipService.ToolTip="Reload the page" Click="RefreshButton_Click"/>
 			<CommandBar.SecondaryCommands>
 				<AppBarButton Icon="Share" Label="Share" ToolTipService.ToolTip="Share the page" Click="ShareButton_Click"/>
 				<AppBarButton x:Name="CopyButton" Icon="Copy" Label="Copy URL" ToolTipService.ToolTip="Copy the URL for the current page" 
-							  Click="CopyButton_Click" FlyoutBase.AttachedFlyout="{StaticResource CopyFlyout}" />
-				<AppBarSeparator x:Name="appBarSeparator"/>
+							  Click="CopyButton_Click" FlyoutBase.AttachedFlyout="{StaticResource CopyFlyout}"/>
+				<AppBarSeparator/>
 				<AppBarButton x:Name="SettingsButton" Icon="Setting" Label="Settings" ToolTipService.ToolTip="Go to the Settings screen" 
 							  Click="SettingsButton_Click"/>
 			</CommandBar.SecondaryCommands>
@@ -56,7 +57,9 @@
 				 RelativePanel.AlignLeftWithPanel="True" RelativePanel.Above="commandBar"
                  NavigationStarting="ArsWebView_NavigationStarting" ContentLoading="ArsWebView_ContentLoading" 
 				 NavigationCompleted="ArsWebView_NavigationCompleted" ContextRequested="ArsWebView_ContextRequested"
-				 UnviewableContentIdentified="ArsWebView_UnviewableContentIdentified">
+				 UnviewableContentIdentified="ArsWebView_UnviewableContentIdentified" 
+				 LongRunningScriptDetected="ArsWebView_LongRunningScriptDetected"
+				 FrameNavigationStarting="ArsWebView_FrameNavigationStarting">
 			<WebView.ContextFlyout>
 				<MenuFlyout>
 					<MenuFlyoutItem Text="Share" Icon="Share" Click="ShareFlyoutItem_Click"/>

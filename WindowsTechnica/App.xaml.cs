@@ -1,19 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
+using Windows.Storage;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace WindowsTechnica
@@ -23,15 +14,34 @@ namespace WindowsTechnica
     /// </summary>
     sealed partial class App : Application
     {
+		ApplicationDataContainer localSettings;
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
         /// </summary>
         public App()
         {
-            this.InitializeComponent();
-            this.Suspending += OnSuspending;
-        }
+            InitializeComponent();
+            Suspending += OnSuspending;
+
+			// Get the theme from settings and change the app theme to the correct theme.
+			localSettings = ApplicationData.Current.LocalSettings;
+			int theme = (int)localSettings.Values["Theme"];
+
+			if (theme == 0)
+			{
+				// The default theme, so I don't need to request it.
+			}
+			else if (theme == 1)
+			{
+				RequestedTheme = ApplicationTheme.Light;
+			}
+			else
+			{
+				RequestedTheme = ApplicationTheme.Dark;
+			}
+		}
 
         /// <summary>
         /// Invoked when the application is launched normally by the end user.  Other entry points
@@ -51,13 +61,14 @@ namespace WindowsTechnica
 				rootFrame.Navigated += OnNavigated;
 				rootFrame.NavigationFailed += OnNavigationFailed;
 
-                if (e.PreviousExecutionState == ApplicationExecutionState.Terminated)
-                {
-                    //TODO: Load state from previously suspended application
-                }
+				if (e.PreviousExecutionState == ApplicationExecutionState.Terminated ||
+					e.PreviousExecutionState == ApplicationExecutionState.ClosedByUser)
+				{
+					//TODO: Load state from previously suspended application
+				}
 
-                // Place the frame in the current Window
-                Window.Current.Content = rootFrame;
+				// Place the frame in the current Window
+				Window.Current.Content = rootFrame;
             }
 
             if (e.PrelaunchActivated == false)
@@ -78,8 +89,7 @@ namespace WindowsTechnica
 			SystemNavigationManager systemNavigationManager = SystemNavigationManager.GetForCurrentView();
 			systemNavigationManager.BackRequested += OnBackRequested;
 			systemNavigationManager.AppViewBackButtonVisibility = rootFrame.CanGoBack ?
-				AppViewBackButtonVisibility.Visible :
-				AppViewBackButtonVisibility.Collapsed;
+				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
 		}
 
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
@@ -95,14 +105,12 @@ namespace WindowsTechnica
 		private void OnNavigated(object sender, NavigationEventArgs e)
 		{
 			// Each time a navigation event occurs, update the Back button's visibility
-			SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
-				((Frame)sender).CanGoBack ?
-				AppViewBackButtonVisibility.Visible :
-				AppViewBackButtonVisibility.Collapsed;
+			SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = ((Frame)sender).CanGoBack ?
+				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
 		}
 
 		/// <summary>
-		/// Invoked when Navigation to a certain page fails
+		/// Invoked when Navigation to a certain page fails.
 		/// </summary>
 		/// <param name="sender">The Frame which failed navigation</param>
 		/// <param name="e">Details about the navigation failure</param>

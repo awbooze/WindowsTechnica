@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" IgnorableNamespaces="uap mp">
-  <Identity Name="c6d67b97-6a8e-43bd-ae30-94bdaf852073" Publisher="CN=awboo" Version="0.3.0.0" />
+  <Identity Name="c6d67b97-6a8e-43bd-ae30-94bdaf852073" Publisher="CN=awboo" Version="0.4.0.0" />
   <mp:PhoneIdentity PhoneProductId="c6d67b97-6a8e-43bd-ae30-94bdaf852073" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>Windows Technica</DisplayName>
