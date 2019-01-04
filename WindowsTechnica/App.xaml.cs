@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Microsoft.QueryStringDotNET;
+using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Storage;
 using Windows.UI.Core;
+using Windows.UI.Notifications;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -50,26 +52,7 @@ namespace WindowsTechnica
         /// <param name="e">Details about the launch request and process.</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            Frame rootFrame = Window.Current.Content as Frame;
-
-            // Do not repeat app initialization when the Window already has content,
-            // just ensure that the window is active
-            if (rootFrame == null)
-            {
-                // Create a Frame to act as the navigation context and navigate to the first page
-                rootFrame = new Frame();
-				rootFrame.Navigated += OnNavigated;
-				rootFrame.NavigationFailed += OnNavigationFailed;
-
-				if (e.PreviousExecutionState == ApplicationExecutionState.Terminated ||
-					e.PreviousExecutionState == ApplicationExecutionState.ClosedByUser)
-				{
-					//TODO: Load state from previously suspended application
-				}
-
-				// Place the frame in the current Window
-				Window.Current.Content = rootFrame;
-            }
+			Frame rootFrame = OnLaunchedOrActivated(e);
 
             if (e.PrelaunchActivated == false)
             {
@@ -84,14 +67,104 @@ namespace WindowsTechnica
                 Window.Current.Activate();
             }
 
-			// Register a handler for BackRequested events and set the
-			// visibility of the Back button
+			// Register a handler for BackRequested events and set the visibility of the Back button
 			SystemNavigationManager systemNavigationManager = SystemNavigationManager.GetForCurrentView();
 			systemNavigationManager.BackRequested += OnBackRequested;
 			systemNavigationManager.AppViewBackButtonVisibility = rootFrame.CanGoBack ?
 				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
 		}
 
+		/// <summary>
+		/// Invoked when the application is launched by the end user through clicking a notification, link, or similar 
+		/// event. This is not involked when the application is launched normally.
+		/// </summary>
+		/// <param name="e">Details about the activation request and process.</param>
+		protected override void OnActivated(IActivatedEventArgs e)
+		{
+			Frame rootFrame = OnLaunchedOrActivated(e);
+
+			// Handle toast activation
+			if (e is ToastNotificationActivatedEventArgs)
+			{
+				var toastActivationArgs = e as ToastNotificationActivatedEventArgs;
+
+				// Parse the query string (using QueryString.NET)
+				QueryString args = QueryString.Parse(toastActivationArgs.Argument);
+
+				// See what action is being requested 
+				switch (args["action"])
+				{
+					case "viewSettings":
+						if(!(rootFrame.Content is SettingsPage))
+						{
+							rootFrame.Navigate(typeof(SettingsPage));
+						}
+						break;
+				}
+
+				// If we're loading the app for the first time, place the main page on
+				// the back stack so that user can go back after they've been
+				// navigated to the specific page
+				if (rootFrame.BackStack.Count == 0)
+					rootFrame.BackStack.Add(new PageStackEntry(typeof(MainPage), null, null));
+			}
+
+			// TODO: Handle other types of activation, such as links.
+
+			// Ensure the current window is active
+			Window.Current.Activate();
+
+			// Register a handler for BackRequested events and set the visibility of the Back button
+			SystemNavigationManager systemNavigationManager = SystemNavigationManager.GetForCurrentView();
+			systemNavigationManager.BackRequested += OnBackRequested;
+			systemNavigationManager.AppViewBackButtonVisibility = rootFrame.CanGoBack ?
+				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
+		}
+
+		/// <summary>
+		/// A method called by both the OnLaunched and OnActivated methods. It is used to set up the root frame for the 
+		/// application and update the live tile.
+		/// </summary>
+		/// <param name="e">Details about the activation request and process.</param>
+		/// <returns>The root frame for this application.</returns>
+		private Frame OnLaunchedOrActivated(IActivatedEventArgs e)
+		{
+			// Get the root frame
+			Frame rootFrame = Window.Current.Content as Frame;
+
+			// Do not repeat app initialization when the Window already has content,
+			// just ensure that the window is active
+			if (rootFrame == null)
+			{
+				// Create a Frame to act as the navigation context
+				rootFrame = new Frame();
+				rootFrame.Navigated += OnNavigated;
+				rootFrame.NavigationFailed += OnNavigationFailed;
+
+				if (e.PreviousExecutionState == ApplicationExecutionState.Terminated ||
+					e.PreviousExecutionState == ApplicationExecutionState.ClosedByUser)
+				{
+					//TODO: Load state from previously suspended application
+				}
+
+				// Place the frame in the current Window
+				Window.Current.Content = rootFrame;
+			}
+
+			// Assume that the user has interacted with content that they have been notified about or does not 
+			// care to do so, so clear all live tile notifications.
+			TileUpdater tileUpdater = TileUpdateManager.CreateTileUpdaterForApplication();
+			tileUpdater.EnableNotificationQueue(true);
+			tileUpdater.Clear();
+
+			return rootFrame;
+		}
+
+		/// <summary>
+		/// The event handler called when the system-provided back button or back event is pressed or activated.
+		/// </summary>
+		/// <param name="sender">The object that produced the event.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
 		{
 			Frame rootFrame = Window.Current.Content as Frame;
@@ -102,6 +175,12 @@ namespace WindowsTechnica
 			}
 		}
 
+		/// <summary>
+		/// Invoked when the root frame has navigated to a new page in the app. Used to update the visibility of the 
+		/// system-provided back button.
+		/// </summary>
+		/// <param name="sender">The frame which navigated to a new page.</param>
+		/// <param name="e">Details about the navigation event.</param>
 		private void OnNavigated(object sender, NavigationEventArgs e)
 		{
 			// Each time a navigation event occurs, update the Back button's visibility
@@ -112,9 +191,9 @@ namespace WindowsTechnica
 		/// <summary>
 		/// Invoked when Navigation to a certain page fails.
 		/// </summary>
-		/// <param name="sender">The Frame which failed navigation</param>
-		/// <param name="e">Details about the navigation failure</param>
-		void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
+		/// <param name="sender">The frame which failed navigation.</param>
+		/// <param name="e">Details about the navigation failure.</param>
+		private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {
             throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
         }

@@ -81,10 +81,10 @@ namespace WindowsTechnica
 		}
 
 		/// <summary>
-		/// A helper method for converting a URI to a string
+		/// A helper method for converting a URI to a string.
 		/// </summary>
-		/// <param name="uri">The URI to convert to a string</param>
-		/// <returns>A string representing this URI</returns>
+		/// <param name="uri">The URI to convert to a string.</param>
+		/// <returns>A string representing this URI.</returns>
 		static string UriToString(Uri uri)
         {
             return (uri != null) ? uri.ToString() : "";
@@ -248,7 +248,8 @@ namespace WindowsTechnica
 
 		/// <summary>
 		/// The event handler called when the CommandBar has finished loading. Currently used to disable dynamic 
-		/// overflow.
+		/// overflow for CommandBar buttons, as using dynamic overflow reduces the amount of buttons readily 
+		/// available on smaller screens.
 		/// </summary>
 		/// <param name="sender">
 		/// The object which has finished loading. In this case, it will always be commandBar.
