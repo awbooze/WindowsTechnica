@@ -15,9 +15,13 @@
 					  RelativePanel.AlignLeftWithPanel="True" RelativePanel.AlignRightWithPanel="True">
 			<StackPanel Orientation="Vertical" Margin="24">
 				<TextBlock Text="Settings" Style="{StaticResource TitleTextBlockStyle}"/>
+				
+				<!-- WebView settings -->
 				<TextBlock Text="WebView" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
 				<TextBox x:Name="HomeUrl" Header="Home URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
 						 HorizontalAlignment="Left" InputScope="Url"/>
+				
+				<!-- Color theme settings -->
 				<TextBlock Text="Theme" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
 				<StackPanel Orientation="Vertical" Margin="0,24,0,0">
 					<TextBlock Text="Choose a mode"/>
@@ -26,11 +30,88 @@
 					<RadioButton Content="Windows default" x:Name="DefaultRadioButton" Checked="RadioButton_Checked"/>
 					<HyperlinkButton Content="Windows color settings" NavigateUri="ms-settings:personalization-colors"/>
 				</StackPanel>
+
+				<!-- Notification settings -->
+				<TextBlock Text="Notifications" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
+				<ToggleSwitch x:Name="enableNotificationsToggle" Header="Article notifications" Margin="0,24,0,0" 
+							  OffContent="Disabled" OnContent="Enabled"/>
+				<StackPanel x:Name="notificationSubscriptionsStackPanel" Orientation="Horizontal" Margin="0,24,0,0" 
+							x:DefaultBindMode="OneWay">
+					<StackPanel Orientation="Vertical" Margin="0,0,24,0">
+						<TextBlock Text="Toast notifications" Margin="0,12,0,12"/>
+						<CheckBox Content="All subscriptions" x:Name="allToastCheckBox" Checked="AllToastCheckBox_Checked" 
+								  Unchecked="AllToastCheckBox_Unchecked" Indeterminate="AllToastCheckBox_Indeterminate"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}" IsThreeState="True"/>
+						<CheckBox Content="Information Technology" x:Name="itToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Tech News &amp; Reviews" x:Name="techToastCheckBox" Margin="24,0,0,0" 
+								  Click="ToastCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Business" x:Name="businessToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Security &amp; Hactivism" x:Name="securityToastCheckBox" Margin="24,0,0,0" 
+								  Click="ToastCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Tech Policy" x:Name="policyToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Gaming &amp; Entertainment" x:Name="gamingToastCheckBox" Margin="24,0,0,0" 
+								  Click="ToastCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Science" x:Name="scienceToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Sci-Fi &amp; Fantasy" x:Name="fantasyToastCheckBox" Margin="24,0,0,0" 
+								  Click="ToastCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Cars" x:Name="carsToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Staff Blogs" x:Name="blogToastCheckBox" Margin="24,0,0,0" Click="ToastCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Board Games" x:Name="boardGameToastCheckBox" Margin="24,0,0,0" 
+								  Click="ToastCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+					</StackPanel>
+					<StackPanel Orientation="Vertical">
+						<TextBlock Text="Live tile notifications" Margin="0,12,0,12"/>
+						<CheckBox Content="All subscriptions" x:Name="allLiveTileCheckBox" Checked="AllLiveTileCheckBox_Checked" 
+								  Unchecked="AllLiveTileCheckBox_Unchecked" Indeterminate="AllLiveTileCheckBox_Indeterminate"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}" IsThreeState="True"/>
+						<CheckBox Content="Information Technology" x:Name="itLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Tech News &amp; Reviews" x:Name="techLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Business" x:Name="businessLiveTileCheckBox" Margin="24,0,0,0" Click="LiveTileCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Security &amp; Hactivism" x:Name="securityLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Tech Policy" x:Name="policyLiveTileCheckBox" Margin="24,0,0,0" Click="LiveTileCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Gaming &amp; Entertainment" x:Name="gamingLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Science" x:Name="scienceLiveTileCheckBox" Margin="24,0,0,0" Click="LiveTileCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Sci-Fi &amp; Fantasy" x:Name="fantasyLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Cars" x:Name="carsLiveTileCheckBox" Margin="24,0,0,0" Click="LiveTileCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Staff Blogs" x:Name="blogLiveTileCheckBox" Margin="24,0,0,0" Click="LiveTileCheckBox_Click"
+								  IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+						<CheckBox Content="Board Games" x:Name="boardGameLiveTileCheckBox" Margin="24,0,0,0" 
+								  Click="LiveTileCheckBox_Click" IsEnabled="{x:Bind enableNotificationsToggle.IsOn}"/>
+					</StackPanel>
+				</StackPanel>
+				<ComboBox x:Name="notificationFrequencyComboBox" Width="200" Header="Update frequency" Margin="0,24,0,0" 
+						  IsEnabled="{x:Bind enableNotificationsToggle.IsOn, Mode=OneWay}">
+					<x:String>15 minutes</x:String>
+					<x:String>30 minutes</x:String>
+					<x:String>1 hour</x:String>
+					<x:String>2 hours</x:String>
+					<x:String>3 hours</x:String>
+					<x:String>5 hours</x:String>
+				</ComboBox>
+				<HyperlinkButton Content="Windows notification settings" NavigateUri="ms-settings:notifications" 
+								 Margin="0,24,0,0"/>
+
+				<!-- Developer options -->
 				<TextBlock Text="Developer options" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
 				<TextBox x:Name="CurrentUrl" Header="Current URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
 						 HorizontalAlignment="Left" InputScope="Url"/>
 				<ToggleSwitch x:Name="enableIframesToggle" Header="Inline frames" Margin="0,24,0,0" 
-							  OffContent="Disabled" OnContent="Enabled" Toggled="EnableIframesToggle_Toggled"/>
+							  OffContent="Disabled" OnContent="Enabled" />
 				<StackPanel Orientation="Horizontal" Margin="0,24,0,0">
 					<Button x:Name="testToastNotificationButton" Content="Send Test Notification" Margin="0,0,24,0"
 							Click="TestNotificationButton_Click"/>
@@ -39,12 +120,14 @@
 					<Button x:Name="clearTileNotificationButton" Content="Clear Live Tile Notifications"
 							Click="TestNotificationButton_Click"/>
 				</StackPanel>
+
+				<!-- About this app -->
 				<TextBlock Text="About" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
 				<TextBlock Text="Created by Andrew Booze" Margin="0,12,0,0"/>
 				<TextBlock Text="Licensed under the MIT License" Margin="0,12,0,0"/>
 				<HyperlinkButton x:Name="LicensesDialogButton" Content="Open Source Licenses" Margin="0,12,0,0" 
 								 Click="LicensesDialogButton_ClickAsync"/>
-				<TextBlock Text="Version: 0.4.1" Margin="0,12,0,0"/>
+				<TextBlock Text="Version: 0.5.0" Margin="0,12,0,0"/>
 			</StackPanel>
 		</ScrollViewer>
 

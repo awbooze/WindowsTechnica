@@ -29,19 +29,27 @@ namespace WindowsTechnica
 
 			// Get the theme from settings and change the app theme to the correct theme.
 			localSettings = ApplicationData.Current.LocalSettings;
-			int theme = (int)localSettings.Values["Theme"];
+			if(localSettings.Values["Theme"] != null)
+			{
+				int theme = (int)localSettings.Values["Theme"];
 
-			if (theme == 0)
-			{
-				// The default theme, so I don't need to request it.
-			}
-			else if (theme == 1)
-			{
-				RequestedTheme = ApplicationTheme.Light;
+				if (theme == 0)
+				{
+					// The default theme, so the app doesn't need to request it.
+				}
+				else if (theme == 1)
+				{
+					RequestedTheme = ApplicationTheme.Light;
+				}
+				else
+				{
+					RequestedTheme = ApplicationTheme.Dark;
+				}
 			}
 			else
 			{
-				RequestedTheme = ApplicationTheme.Dark;
+				// Save the default theme so that it initializes correctly next time.
+				localSettings.Values["Theme"] = 0;
 			}
 		}
 

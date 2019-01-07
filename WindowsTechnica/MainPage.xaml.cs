@@ -4,6 +4,7 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Foundation.Metadata;
 using Windows.Storage;
+using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -15,14 +16,15 @@ using Windows.UI.Xaml.Navigation;
 
 namespace WindowsTechnica
 {
-    /// <summary>
-    /// The main page of this application. Contains a CommandBar and a WebView.
-    /// </summary>
-    public sealed partial class MainPage : Page
-    {
-        private Uri currentUri;
-        private string currentUrl;
-        private string homeUrl;
+	/// <summary>
+	/// The main page of this application. Contains a CommandBar and a WebView.
+	/// </summary>
+	public sealed partial class MainPage : Page
+	{
+		private const string FALLBACK_HOME_URL = "https://arstechnica.com/";
+		private Uri currentUri;
+		private string currentUrl;
+		private string homeUrl;
 		ApplicationDataContainer localSettings;
 
 		/// <summary>
@@ -31,22 +33,22 @@ namespace WindowsTechnica
 		/// when the app is being suspended.
 		/// </summary>
 		public MainPage()
-        {
-            InitializeComponent();
+		{
+			InitializeComponent();
 
 			// Gets local settings to initialize the webview to the correct page.
 			localSettings = ApplicationData.Current.LocalSettings;
-			object tempHome = localSettings.Values["homeUrl"];
+			var tempHome = localSettings.Values["homeUrl"];
 			if (tempHome == null)
 			{
-				homeUrl = "https://arstechnica.com/";
+				homeUrl = FALLBACK_HOME_URL;
 			}
 			else
 			{
 				homeUrl = (string)tempHome;
 			}
 
-			object tempUrl = localSettings.Values["currentUrl"];
+			var tempUrl = localSettings.Values["currentUrl"];
 			if (tempUrl == null)
 			{
 				currentUrl = homeUrl;
@@ -56,7 +58,14 @@ namespace WindowsTechnica
 				currentUrl = (string)tempUrl;
 			}
 
-			currentUri = new Uri(currentUrl);
+			try
+			{
+				currentUri = new Uri(currentUrl);
+			}
+			catch (FormatException)
+			{
+				currentUri = new Uri(FALLBACK_HOME_URL);
+			}
 			ArsWebView.Navigate(currentUri);
 
 			// Overrides data requested method to share the current page
@@ -86,9 +95,9 @@ namespace WindowsTechnica
 		/// <param name="uri">The URI to convert to a string.</param>
 		/// <returns>A string representing this URI.</returns>
 		static string UriToString(Uri uri)
-        {
-            return (uri != null) ? uri.ToString() : "";
-        }
+		{
+			return (uri != null) ? uri.ToString() : "";
+		}
 
 		/// <summary>
 		/// The event handler called when ArsWebView begins navigating to a new page.
@@ -97,9 +106,9 @@ namespace WindowsTechnica
 		/// The WebView which has started navigating to a new page. In this case, it will always be ArsWebView.
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
-        private void ArsWebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
-        {
-			if(IsAllowedUri(args.Uri))
+		private void ArsWebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
+		{
+			if (IsAllowedUri(args.Uri))
 			{
 				// If the page is allowed, show the progress bar and let the WebView load the page
 				ArsProgressBar.ShowPaused = false;
@@ -109,10 +118,10 @@ namespace WindowsTechnica
 			{
 				// Otherwise, the link is not for a page on Ars, so launch the system-provided browser and stop 
 				// loading it in the WebView
-				IAsyncOperation<bool> b = Windows.System.Launcher.LaunchUriAsync(args.Uri);
+				IAsyncOperation<bool> b = Launcher.LaunchUriAsync(args.Uri);
 				args.Cancel = true;
 			}
-        }
+		}
 
 		/// <summary>
 		/// Checks if the WebView is allowed to load the provided URI. If it is an Ars Technica URL, then the WebView 
@@ -122,7 +131,7 @@ namespace WindowsTechnica
 		/// <returns>True if the URI is related to Ars Technica and false if it is not</returns>
 		private bool IsAllowedUri(Uri uri)
 		{
-			if(uri.Host.Contains("arstechnica.com"))
+			if (uri.Host.Contains("arstechnica.com"))
 			{
 				return true;
 			}
@@ -153,13 +162,13 @@ namespace WindowsTechnica
 			if (ArsWebView.CanGoBack)
 			{
 				BackButton.IsEnabled = true;
-				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = 
+				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
 					AppViewBackButtonVisibility.Visible;
 			}
 			else
 			{
 				BackButton.IsEnabled = false;
-				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = 
+				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
 					AppViewBackButtonVisibility.Collapsed;
 			}
 
@@ -181,7 +190,7 @@ namespace WindowsTechnica
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
 		private void ArsWebView_NavigationCompleted(WebView sender, WebViewNavigationCompletedEventArgs args)
-        {
+		{
 			// Hide the progress bar
 			ArsProgressBar.Visibility = Visibility.Collapsed;
 			ArsProgressBar.ShowPaused = true;
@@ -200,10 +209,10 @@ namespace WindowsTechnica
 		/// The WebView which has tried to open unviewable content. In this case, it will always be ArsWebView.
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
-		private void ArsWebView_UnviewableContentIdentified(WebView sender, 
+		private void ArsWebView_UnviewableContentIdentified(WebView sender,
 			WebViewUnviewableContentIdentifiedEventArgs args)
 		{
-			IAsyncOperation<bool> b = Windows.System.Launcher.LaunchUriAsync(args.Uri);
+			IAsyncOperation<bool> b = Launcher.LaunchUriAsync(args.Uri);
 			ArsWebView.Stop();
 		}
 
@@ -283,12 +292,12 @@ namespace WindowsTechnica
 		/// <param name="sender">The back button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void BackButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ArsWebView.CanGoBack)
-            {
-                ArsWebView.GoBack();
-            }
-        }
+		{
+			if (ArsWebView.CanGoBack)
+			{
+				ArsWebView.GoBack();
+			}
+		}
 
 		/// <summary>
 		/// The event handler called when the forward button is clicked.
@@ -296,12 +305,12 @@ namespace WindowsTechnica
 		/// <param name="sender">The forward button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void ForwardButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ArsWebView.CanGoForward)
-            {
-                ArsWebView.GoForward();
-            }
-        }
+		{
+			if (ArsWebView.CanGoForward)
+			{
+				ArsWebView.GoForward();
+			}
+		}
 
 		/// <summary>
 		/// The event handler called when the home button is clicked.
@@ -309,10 +318,10 @@ namespace WindowsTechnica
 		/// <param name="sender">The home button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void HomeButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			Uri targetUri = new Uri(homeUrl);
 			ArsWebView.Navigate(targetUri);
-        }
+		}
 
 		/// <summary>
 		/// The event handler called when the refresh button is clicked.
@@ -320,10 +329,10 @@ namespace WindowsTechnica
 		/// <param name="sender">The refresh button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void RefreshButton_Click(object sender, RoutedEventArgs e)
-        {
-            //Refresh the webpage
-            ArsWebView.Refresh();
-        }
+		{
+			//Refresh the webpage
+			ArsWebView.Refresh();
+		}
 
 		/// <summary>
 		/// The event handler called when the share button is clicked.
@@ -331,9 +340,9 @@ namespace WindowsTechnica
 		/// <param name="sender">The share button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void ShareButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			//Share the current url
-			DataTransferManager.ShowShareUI();								//Shows share UI
+			DataTransferManager.ShowShareUI();                              //Shows share UI
 		}
 
 		/// <summary>
@@ -354,11 +363,11 @@ namespace WindowsTechnica
 		/// <param name="sender">The copy button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void CopyButton_Click(object sender, RoutedEventArgs e)
-        {
-            //Copy the current url to the clipboard
-            CopyToClipboard(currentUrl, currentUri);
-            FlyoutBase.ShowAttachedFlyout(CopyButton);
-        }
+		{
+			//Copy the current url to the clipboard
+			CopyToClipboard(currentUrl, currentUri);
+			FlyoutBase.ShowAttachedFlyout(CopyButton);
+		}
 
 		/// <summary>
 		/// Copies the current URI to the clipboard.
@@ -382,15 +391,15 @@ namespace WindowsTechnica
 		/// <param name="sender">The settings button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			//Open the settings screen
 			Frame.Navigate(typeof(SettingsPage));
 		}
 
 		private void ShareFlyoutItem_Click(object sender, RoutedEventArgs e)
-        {
-            //Share target of hit test
-        }
+		{
+			//Share target of hit test
+		}
 
 		private void CopyFlyoutItem_Click(object sender, RoutedEventArgs e)
 		{
@@ -403,7 +412,11 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
 		{
-			localSettings.Values["currentUrl"] = currentUrl;
+			// Call the superclass
+			base.OnNavigatingFrom(e);
+
+			// Save local settings
+			SaveLocalSettings();
 		}
 
 		/// <summary>
@@ -414,7 +427,19 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnAppSuspending(object sender, SuspendingEventArgs e)
 		{
+			// Save local settings
+			SaveLocalSettings();
+		}
+
+		/// <summary>
+		/// A method called by both OnNavigatingFrom and OnAppSuspending to save settings values to LocalSettings.
+		/// </summary>
+		private void SaveLocalSettings()
+		{
+			// Save the home url
 			localSettings.Values["homeUrl"] = homeUrl;
+
+			// Save the current url
 			localSettings.Values["currentUrl"] = currentUrl;
 		}
 	}

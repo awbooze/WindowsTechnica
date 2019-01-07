@@ -4,8 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	mc:Ignorable="d"
-	Loaded="Page_Loaded">
+	mc:Ignorable="d" Loaded="Page_Loaded">
 
 	<!-- Declare the shared flyout as a resource -->
 	<Page.Resources>
@@ -39,16 +38,14 @@
 				<AppBarButton x:Name="CopyButton" Icon="Copy" Label="Copy URL" ToolTipService.ToolTip="Copy the URL for the current page" 
 							  Click="CopyButton_Click" FlyoutBase.AttachedFlyout="{StaticResource CopyFlyout}"/>
 				<AppBarSeparator/>
-				<AppBarButton x:Name="SettingsButton" Icon="Setting" Label="Settings" ToolTipService.ToolTip="Go to the Settings screen" 
-							  Click="SettingsButton_Click"/>
+				<AppBarButton Icon="Setting" Label="Settings" ToolTipService.ToolTip="Go to the Settings screen" Click="SettingsButton_Click"/>
 			</CommandBar.SecondaryCommands>
 		</CommandBar>
 
 		<!-- The progress bar (only shown when pages are loading) -->
 		<ProgressBar x:Name="ArsProgressBar" Visibility="Visible" IsIndeterminate="True" ShowPaused="True" Background="#1D1B1B"
-                     RelativePanel.Below="ArsWebView"
-					 RelativePanel.AlignHorizontalCenterWith="ArsWebView" RelativePanel.AlignLeftWith="ArsWebView"
-					 RelativePanel.AlignRightWith="ArsWebView" />
+                     RelativePanel.Below="ArsWebView" RelativePanel.AlignHorizontalCenterWith="ArsWebView" 
+					 RelativePanel.AlignLeftWith="ArsWebView" RelativePanel.AlignRightWith="ArsWebView" />
 
 		<!-- The WebView with initial source -->
 		<WebView x:Name="ArsWebView" Source="https://www.arstechnica.com/" Height="auto" Width="auto" MinWidth="360" 
