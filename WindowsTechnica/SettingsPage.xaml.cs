@@ -218,6 +218,16 @@ namespace WindowsTechnica
 				// The app defaults to true because disabling Iframes removes ads and may cause issues I haven't found yet.
 				enableIframesToggle.IsOn = true;
 			}
+
+			// Initialize last check for updates data
+			if(localSettings.Values["lastCheckForUpdatesDateTime"] != null)
+			{
+				lastCheckForUpdatesTextBox.Text = ((DateTime)localSettings.Values["lastCheckForUpdatesDateTime"]).ToString();
+			}
+			else
+			{
+				lastCheckForUpdatesTextBox.Text = new DateTime(DateTime.Now.Ticks).ToString();
+			}
 		}
 
 		/// <summary>
@@ -689,7 +699,10 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnAppSuspending(object sender, SuspendingEventArgs e)
 		{
+			// Save local settings
+			var deferral = e.SuspendingOperation.GetDeferral();
 			SaveLocalSettings();
+			deferral.Complete();
 		}
 
 		/// <summary>

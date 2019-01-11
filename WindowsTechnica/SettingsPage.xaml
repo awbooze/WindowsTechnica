@@ -18,8 +18,8 @@
 				
 				<!-- WebView settings -->
 				<TextBlock Text="WebView" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
-				<TextBox x:Name="HomeUrl" Header="Home URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
-						 HorizontalAlignment="Left" InputScope="Url"/>
+				<TextBox x:Name="HomeUrl" Header="Home URL" Margin="0,24,0,0" Width="400" HorizontalAlignment="Left" 
+						 InputScope="Url"/>
 				
 				<!-- Color theme settings -->
 				<TextBlock Text="Theme" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
@@ -108,8 +108,8 @@
 
 				<!-- Developer options -->
 				<TextBlock Text="Developer options" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
-				<TextBox x:Name="CurrentUrl" Header="Current URL" Margin="0,24,0,0" MaxLength="32" Width="400" 
-						 HorizontalAlignment="Left" InputScope="Url"/>
+				<TextBox x:Name="CurrentUrl" Header="Current URL" Margin="0,24,0,0" Width="400" HorizontalAlignment="Left" 
+						 InputScope="Url"/>
 				<ToggleSwitch x:Name="enableIframesToggle" Header="Inline frames" Margin="0,24,0,0" 
 							  OffContent="Disabled" OnContent="Enabled" />
 				<StackPanel Orientation="Horizontal" Margin="0,24,0,0">
@@ -120,6 +120,8 @@
 					<Button x:Name="clearTileNotificationButton" Content="Clear Live Tile Notifications"
 							Click="TestNotificationButton_Click"/>
 				</StackPanel>
+				<TextBox x:Name="lastCheckForUpdatesTextBox" Header="Last check for updates" Margin="0,24,0,0" Width="400"
+						 HorizontalAlignment="Left" InputScope="Default"/>
 
 				<!-- About this app -->
 				<TextBlock Text="About" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>

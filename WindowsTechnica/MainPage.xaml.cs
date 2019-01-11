@@ -428,7 +428,9 @@ namespace WindowsTechnica
 		private void OnAppSuspending(object sender, SuspendingEventArgs e)
 		{
 			// Save local settings
+			var deferral = e.SuspendingOperation.GetDeferral();
 			SaveLocalSettings();
+			deferral.Complete();
 		}
 
 		/// <summary>
