@@ -1,6 +1,7 @@
 ﻿using Microsoft.QueryStringDotNET;
 using Microsoft.Toolkit.Uwp.Notifications;
 using System;
+using System.Text.RegularExpressions;
 using Windows.ApplicationModel;
 using Windows.Foundation.Metadata;
 using Windows.Storage;
@@ -20,6 +21,7 @@ namespace WindowsTechnica
 	/// </summary>
 	public sealed partial class SettingsPage : Page
 	{
+		bool isPageLoad;
 		int theme;
 		int i = 0;
 		CheckBox[] toastCheckBoxes;
@@ -48,6 +50,8 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void Page_Loaded(object sender, RoutedEventArgs e)
 		{
+			isPageLoad = true;
+			
 			// Initialize homeUrl setting
 			if (localSettings.Values["homeUrl"] != null)
 			{
@@ -194,7 +198,8 @@ namespace WindowsTechnica
 
 			if(notificationFrequencyCompositeValue != null)
 			{
-				notificationFrequencyComboBox.SelectedIndex = (int)notificationFrequencyCompositeValue["comboBoxSelectedIndex"];
+				notificationFrequencyComboBox.SelectedIndex = 
+					(int)notificationFrequencyCompositeValue["comboBoxSelectedIndex"];
 			}
 			else
 			{
@@ -219,15 +224,19 @@ namespace WindowsTechnica
 				enableIframesToggle.IsOn = true;
 			}
 
-			// Initialize last check for updates data
+			// Initialize last check for updates date and time
 			if(localSettings.Values["lastCheckForUpdatesDateTime"] != null)
 			{
-				lastCheckForUpdatesTextBox.Text = ((DateTime)localSettings.Values["lastCheckForUpdatesDateTime"]).ToString();
+				lastCheckForUpdatesTextBox.Text = 
+					((DateTimeOffset)localSettings.Values["lastCheckForUpdatesDateTime"]).ToUniversalTime().ToString();
 			}
 			else
 			{
-				lastCheckForUpdatesTextBox.Text = new DateTime(DateTime.Now.Ticks).ToString();
+				// By default, only fetch notifications from the last day
+				lastCheckForUpdatesTextBox.Text = DateTimeOffset.UtcNow.AddDays(-1).ToString();
 			}
+
+			isPageLoad = false;
 		}
 
 		/// <summary>
@@ -270,6 +279,20 @@ namespace WindowsTechnica
 						Frame.RequestedTheme = ElementTheme.Default;
 					}
 					break;
+			}
+		}
+
+		
+		private void EnableNotificationsToggle_Toggled(object sender, RoutedEventArgs e)
+		{
+			// If this event handler was not triggered because of a page load ...
+			if (!isPageLoad)
+			{
+				// Save the setting ...
+				localSettings.Values["notificationsEnabled"] = enableNotificationsToggle.IsOn;
+
+				// Broadcast that the settings have changed
+				ApplicationData.Current.SignalDataChanged();
 			}
 		}
 
@@ -473,6 +496,52 @@ namespace WindowsTechnica
 			}
 		}
 
+
+		private void NotificationFrequencyComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{ 
+			// If this event handler was not triggered because of a page load ...
+			if (!isPageLoad)
+			{
+				// Save the notification frequency setting ...
+				int notificationFrequency = -1;
+
+				switch (notificationFrequencyComboBox.SelectedIndex)
+				{
+					case 0:
+						notificationFrequency = 15;
+						break;
+					case 1:
+						notificationFrequency = 30;
+						break;
+					case 2:
+						notificationFrequency = 60;
+						break;
+					case 3:
+						notificationFrequency = 120;
+						break;
+					case 4:
+						notificationFrequency = 180;
+						break;
+					case 5:
+						notificationFrequency = 300;
+						break;
+					default:
+						break;
+				}
+
+				ApplicationDataCompositeValue notificationFrequencyComposite = new ApplicationDataCompositeValue
+				{
+					["notificationFrequency"] = notificationFrequency,
+					["comboBoxSelectedIndex"] = notificationFrequencyComboBox.SelectedIndex
+				};
+
+				localSettings.Values["notificationFrequencyComposite"] = notificationFrequencyComposite;
+
+				// Broadcast that the settings have changed
+				ApplicationData.Current.SignalDataChanged();
+			}
+		}
+
 		/// <summary>
 		/// The event handler called when one of the three test notification buttons is clicked. Used to send or clear 
 		/// test notifications.
@@ -484,49 +553,74 @@ namespace WindowsTechnica
 			Button clickedButton = (Button)sender;
 
 			string articleTitle = "Test Article Notification";
-			string articleText = "This is long text that would not be able to fit on one line. This area of text " +
-									"would typically include a snippet from the article or the article subtitle.";
+			string articleText = "This is <em>long text</em> that would <b>not</b> be able to fit on one line. " +
+				"This area of text would typically include a snippet from the article or the article subtitle.";
+			try
+			{
+				articleText = Regex.Replace(articleText, "<.*?>", String.Empty, RegexOptions.IgnoreCase, 
+					TimeSpan.FromSeconds(2));
+			}
+			catch (ArgumentException)
+			{
+				// A parse error occured, so just use the text from before parsing.
+			}
+			catch (RegexMatchTimeoutException)
+			{
+				// The regular expression timed out, either because the timeout limit was too low or the regex 
+				// matcher was backtracking too much. In this instance, also use the text from before parsing.
+			}
 			string articleType = "Article Type";
 
 			// Send a toast notification
 			if (clickedButton.Name.Equals("testToastNotificationButton"))
 			{
-				// Construct the visuals of the toast
-				ToastVisual visual = new ToastVisual()
-				{
-					BindingGeneric = new ToastBindingGeneric()
-					{
-						Children =
-						{
-							new AdaptiveText()
-							{
-								Text = articleTitle
-							},
-
-							new AdaptiveText()
-							{
-								Text = articleText
-							},
-						},
-
-						Attribution = new ToastGenericAttributionText()
-						{
-							Text = articleType
-						}
-					}
-				};
-
-				// Now we can construct the final toast content
 				ToastContent toastContent = new ToastContent()
 				{
-					Visual = visual,
+					// Construct the visuals of the toast
+					Visual = new ToastVisual()
+					{
+						BindingGeneric = new ToastBindingGeneric()
+						{
+							Children =
+							{
+								new AdaptiveText()
+								{
+									Text = articleTitle
+								},
+
+								new AdaptiveText()
+								{
+									Text = articleText
+								},
+							},
+
+							Attribution = new ToastGenericAttributionText()
+							{
+								Text = articleType
+							}
+						}
+					},
 
 					// Arguments when the user taps body of toast
 					Launch = new QueryString()
 					{
 						{ "action", "viewSettings"}
 
-					}.ToString()
+					}.ToString(),
+
+					Actions = new ToastActionsCustom()
+					{
+						Buttons =
+						{
+							new ToastButton("View settings", new QueryString()
+								{
+									{ "action", "viewSettings" },
+								}.ToString())
+							{
+								ActivationType = ToastActivationType.Foreground
+							},
+						}
+					}
 				};
 
 				// Create and send the toast notification
@@ -721,8 +815,6 @@ namespace WindowsTechnica
 			localSettings.Values["Theme"] = theme;
 
 			// Save notification settings
-			localSettings.Values["notificationsEnabled"] = enableNotificationsToggle.IsOn;
-
 			// Save toast check boxes
 			ApplicationDataCompositeValue toastCheckBoxComposite = new ApplicationDataCompositeValue();
 
@@ -743,43 +835,24 @@ namespace WindowsTechnica
 
 			localSettings.Values["liveTileCheckBoxComposite"] = liveTileCheckBoxComposite;
 
-			// Save notification frequency
-			int notificationFrequency = -1;
-
-			switch (notificationFrequencyComboBox.SelectedIndex)
-			{
-				case 0:
-					notificationFrequency = 15;
-					break;
-				case 1:
-					notificationFrequency = 30;
-					break;
-				case 2:
-					notificationFrequency = 60;
-					break;
-				case 3:
-					notificationFrequency = 120;
-					break;
-				case 4:
-					notificationFrequency = 180;
-					break;
-				case 5:
-					notificationFrequency = 300;
-					break;
-				default:
-					break;
-			}
-
-			ApplicationDataCompositeValue notificationFrequencyComposite = new ApplicationDataCompositeValue
-			{
-				["notificationFrequency"] = notificationFrequency,
-				["comboBoxSelectedIndex"] = notificationFrequencyComboBox.SelectedIndex
-			};
-
-			localSettings.Values["notificationFrequencyComposite"] = notificationFrequencyComposite;
-
 			// Save setting for inline frames in html
 			localSettings.Values["enableIframes"] = enableIframesToggle.IsOn;
+
+			// Save setting for last check for updates
+			try
+			{
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.Parse(lastCheckForUpdatesTextBox.Text).ToUniversalTime();
+			}
+			catch (ArgumentException)
+			{
+				// String did not exist or the offset was incorrect. Just use the default date and time.
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow.AddDays(-1);
+			}
+			catch (FormatException)
+			{
+				// The date in the textbox was formatted incorrectly, so save the default DateTime (1 day ago)
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow.AddDays(-1);
+			}
 		}
 	}
 }

@@ -34,7 +34,7 @@
 				<!-- Notification settings -->
 				<TextBlock Text="Notifications" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,24,0,0"/>
 				<ToggleSwitch x:Name="enableNotificationsToggle" Header="Article notifications" Margin="0,24,0,0" 
-							  OffContent="Disabled" OnContent="Enabled"/>
+							  OffContent="Disabled" OnContent="Enabled" Toggled="EnableNotificationsToggle_Toggled"/>
 				<StackPanel x:Name="notificationSubscriptionsStackPanel" Orientation="Horizontal" Margin="0,24,0,0" 
 							x:DefaultBindMode="OneWay">
 					<StackPanel Orientation="Vertical" Margin="0,0,24,0">
@@ -95,7 +95,8 @@
 					</StackPanel>
 				</StackPanel>
 				<ComboBox x:Name="notificationFrequencyComboBox" Width="200" Header="Update frequency" Margin="0,24,0,0" 
-						  IsEnabled="{x:Bind enableNotificationsToggle.IsOn, Mode=OneWay}">
+						  IsEnabled="{x:Bind enableNotificationsToggle.IsOn, Mode=OneWay}" 
+						  SelectionChanged="NotificationFrequencyComboBox_SelectionChanged">
 					<x:String>15 minutes</x:String>
 					<x:String>30 minutes</x:String>
 					<x:String>1 hour</x:String>

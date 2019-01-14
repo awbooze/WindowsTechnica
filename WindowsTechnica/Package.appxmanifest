@@ -31,6 +31,15 @@
           <uap:Rotation Preference="landscapeFlipped" />
         </uap:InitialRotationPreference>
       </uap:VisualElements>
+      <Extensions>
+        <Extension Category="windows.updateTask" EntryPoint="Tasks.UpdateTask" />
+        <Extension Category="windows.backgroundTasks" EntryPoint="Tasks.NotificationsBackgroundTask">
+          <BackgroundTasks>
+            <Task Type="systemEvent" />
+            <Task Type="timer" />
+          </BackgroundTasks>
+        </Extension>
+      </Extensions>
     </Application>
   </Applications>
   <Capabilities>

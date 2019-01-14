@@ -103,18 +103,33 @@ namespace WindowsTechnica
 				switch (args["action"])
 				{
 					case "viewSettings":
-						if(!(rootFrame.Content is SettingsPage))
+						if (!(rootFrame.Content is SettingsPage))
 						{
 							rootFrame.Navigate(typeof(SettingsPage));
+
+							// If we're loading the Settings page for the first time, place the main page on
+							// the back stack so that user can go back after they've been
+							// navigated to the specific page
+							if (rootFrame.BackStack.Count == 0)
+							{
+								rootFrame.BackStack.Add(new PageStackEntry(typeof(MainPage), null, null));
+							}
+						}
+						break;
+					case "viewArticle":
+						if (!(rootFrame.Content is MainPage))
+						{
+							if (args["url"] != null)
+							{
+								rootFrame.Navigate(typeof(MainPage), args["url"]);
+							}
+							else
+							{
+								rootFrame.Navigate(typeof(MainPage));
+							}
 						}
 						break;
 				}
-
-				// If we're loading the app for the first time, place the main page on
-				// the back stack so that user can go back after they've been
-				// navigated to the specific page
-				if (rootFrame.BackStack.Count == 0)
-					rootFrame.BackStack.Add(new PageStackEntry(typeof(MainPage), null, null));
 			}
 
 			// TODO: Handle other types of activation, such as links.

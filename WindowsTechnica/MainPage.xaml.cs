@@ -1,5 +1,6 @@
 ﻿using System;
 using Windows.ApplicationModel;
+using Windows.ApplicationModel.Background;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Foundation.Metadata;
@@ -71,8 +72,44 @@ namespace WindowsTechnica
 			// Overrides data requested method to share the current page
 			DataTransferManager.GetForCurrentView().DataRequested += MainPage_DataRequested;
 
-			// Adds an event handler that is called when the app is suspending.
+			// Registers an event handler for the DataChanged event as part of initializing notifications
+			ApplicationData.Current.DataChanged += new TypedEventHandler<ApplicationData, object>(Data_Changed);
+			if(localSettings.Values["recentlyUpdated"] != null && (bool)localSettings.Values["recentlyUpdated"] == true)
+			{
+				InitializeNotifications(true);
+				localSettings.Values["recentlyUpdated"] = false;
+			}
+			else
+			{
+				InitializeNotifications(false);
+			}
+			
+			// Adds an event handler that is called when the app is suspending
 			Application.Current.Suspending += new SuspendingEventHandler(OnAppSuspending);
+		}
+
+		protected override void OnNavigatedTo(NavigationEventArgs e)
+		{
+			if(e.Parameter != null && !e.Parameter.ToString().Equals(String.Empty))
+			{
+				try
+				{
+					currentUri = new Uri(e.Parameter.ToString());
+					currentUrl = e.Parameter.ToString();
+				}
+				catch (FormatException)
+				{
+					try
+					{
+						currentUri = new Uri(currentUrl);
+					}
+					catch (FormatException)
+					{
+						currentUri = new Uri(FALLBACK_HOME_URL);
+					}
+				}
+				ArsWebView.Navigate(currentUri);
+			}
 		}
 
 		/// <summary>
@@ -87,6 +124,108 @@ namespace WindowsTechnica
 			systemNavigationManager.BackRequested += OnBackRequested;
 			systemNavigationManager.AppViewBackButtonVisibility = ArsWebView.CanGoBack || rootFrame.CanGoBack ?
 				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
+		}
+
+
+		private void Data_Changed(ApplicationData sender, object args)
+		{
+			InitializeNotifications(true);
+		}
+
+
+		private async void InitializeNotifications(bool shouldReschedule)
+		{
+			//Check if notifications are enabled by the user
+			bool notificationsEnabled = false;
+
+			if (localSettings.Values["notificationsEnabled"] != null)
+			{
+				notificationsEnabled = (bool)localSettings.Values["notificationsEnabled"];
+			}
+
+			bool notificationTaskRegistered = false;
+			string notificationTaskName = "NotificationsBackgroundTask";
+
+			// If notifications enabled, deal with setting up the background task
+			if (notificationsEnabled)
+			{
+				// Figure out whether notification background task is active and don't re-register it unless 
+				// some settings have changed to make it necessary to re-register
+				foreach (var task in BackgroundTaskRegistration.AllTasks)
+				{
+					if (task.Value.Name.Equals(notificationTaskName))
+					{
+						if(shouldReschedule)
+						{
+							task.Value.Unregister(true);
+							BackgroundExecutionManager.RemoveAccess();
+						}
+						else
+						{
+							notificationTaskRegistered = true;
+						}
+						break;
+					}
+				}
+
+				// Get the background access status
+				BackgroundAccessStatus backgroundAccessStatus = await BackgroundExecutionManager.RequestAccessAsync();
+				bool notificationsAllowed = false;
+				if (backgroundAccessStatus == BackgroundAccessStatus.AlwaysAllowed ||
+					backgroundAccessStatus == BackgroundAccessStatus.AllowedSubjectToSystemPolicy)
+				{
+					notificationsAllowed = true;
+				}
+
+				// Register the background task if it has not already been registered.
+				if (!notificationTaskRegistered && notificationsAllowed)
+				{
+					BackgroundTaskBuilder builder = new BackgroundTaskBuilder
+					{
+						Name = notificationTaskName,
+						TaskEntryPoint = "Tasks." + notificationTaskName
+					};
+
+					uint notificationFrequency;
+
+					ApplicationDataCompositeValue notificationFrequencyCompositeValue =
+						(ApplicationDataCompositeValue)localSettings.Values["notificationFrequencyComposite"];
+
+					if (notificationFrequencyCompositeValue != null)
+					{
+						notificationFrequency = Convert.ToUInt32((int)notificationFrequencyCompositeValue["notificationFrequency"]);
+					}
+					else
+					{
+						// Default to checking for notifications once every hour
+						notificationFrequency = 60;
+					}
+
+					builder.SetTrigger(new TimeTrigger(notificationFrequency, false));
+					builder.IsNetworkRequested = true;
+					builder.AddCondition(new SystemCondition(SystemConditionType.InternetAvailable));
+
+					BackgroundTaskRegistration task = builder.Register();
+				}
+				else if (!notificationsAllowed)
+				{
+					// TODO: Display a dialog box that states that the app can't run in the background, 
+					// so notifications won't work.
+				}
+			}
+			else
+			{
+				foreach (var task in BackgroundTaskRegistration.AllTasks)
+				{
+					if (task.Value.Name.Equals(notificationTaskName))
+					{
+						task.Value.Unregister(true);
+						break;
+					}
+				}
+
+				BackgroundExecutionManager.RemoveAccess();
+			}
 		}
 
 		/// <summary>
