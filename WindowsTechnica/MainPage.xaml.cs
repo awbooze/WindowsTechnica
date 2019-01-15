@@ -22,6 +22,7 @@ namespace WindowsTechnica
 	/// </summary>
 	public sealed partial class MainPage : Page
 	{
+		private bool onMainPage = true;
 		private const string FALLBACK_HOME_URL = "https://arstechnica.com/";
 		private Uri currentUri;
 		private string currentUrl;
@@ -110,6 +111,8 @@ namespace WindowsTechnica
 				}
 				ArsWebView.Navigate(currentUri);
 			}
+
+			onMainPage = true;
 		}
 
 		/// <summary>
@@ -209,8 +212,27 @@ namespace WindowsTechnica
 				}
 				else if (!notificationsAllowed)
 				{
-					// TODO: Display a dialog box that states that the app can't run in the background, 
-					// so notifications won't work.
+					// Display a dialog box that states that the app can't run in the background, 
+					// so notifications won't work, only if the user is on the main page and notifications 
+					// are enabled in the first place.
+					if(onMainPage)
+					{
+						ContentDialog backgroundNotAllowedDialog = new ContentDialog()
+						{
+							Title = "Background Activity not allowed",
+							Content = "It seems that Windows is not allowing Windows Technica to run in the background. " +
+										"This means you will not get any notifications. If you want to get notifications, change " +
+										"the background app setting for Windows Technica.",
+							PrimaryButtonText = "Check Windows settings",
+							CloseButtonText = "Disable notifications"
+						};
+
+						backgroundNotAllowedDialog.Loaded += BackgroundNotAllowedDialog_Loaded;
+						backgroundNotAllowedDialog.PrimaryButtonClick += BackgroundNotAllowedDialog_PrimaryButtonClickAsync;
+						backgroundNotAllowedDialog.CloseButtonClick += BackgroundNotAllowedDialog_CloseButtonClick;
+
+						await backgroundNotAllowedDialog.ShowAsync();
+					}
 				}
 			}
 			else
@@ -226,6 +248,43 @@ namespace WindowsTechnica
 
 				BackgroundExecutionManager.RemoveAccess();
 			}
+		}
+
+		/// <summary>
+		/// The event handler called when the backgroundNotAllowedDialog is loaded. Used to set the default 
+		/// button for the dialog.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private void BackgroundNotAllowedDialog_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (ApiInformation.IsPropertyPresent("Windows.UI.Xaml.Controls.ContentDialog", "DefaultButton"))
+			{
+				((ContentDialog)sender).DefaultButton = ContentDialogButton.Primary;
+			}
+		}
+
+		/// <summary>
+		/// The event handler called when the primary button of the backgroundNotAllowedDialog is pressed. 
+		/// Launches the settings app to allow the user to alter the background app permission for this app.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private async void BackgroundNotAllowedDialog_PrimaryButtonClickAsync(ContentDialog sender, 
+			ContentDialogButtonClickEventArgs args)
+		{
+			await Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures-app"));
+		}
+
+		/// <summary>
+		/// The event handler called when the close button of the backgroundNotAllowedDialog is clicked. Used 
+		/// to disable notifications, as the app isn't allowed to fetch them, anyway.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private void BackgroundNotAllowedDialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+		{
+			localSettings.Values["notificationsEnabled"] = false;
 		}
 
 		/// <summary>
@@ -556,6 +615,8 @@ namespace WindowsTechnica
 
 			// Save local settings
 			SaveLocalSettings();
+
+			onMainPage = false;
 		}
 
 		/// <summary>
