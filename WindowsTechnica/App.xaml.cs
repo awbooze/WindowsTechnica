@@ -175,10 +175,13 @@ namespace WindowsTechnica
 			}
 
 			// Assume that the user has interacted with content that they have been notified about or does not 
-			// care to do so, so clear all live tile notifications.
+			// care to do so, so clear all live tile notifications and badge notifications.
 			TileUpdater tileUpdater = TileUpdateManager.CreateTileUpdaterForApplication();
 			tileUpdater.EnableNotificationQueue(true);
 			tileUpdater.Clear();
+
+			BadgeUpdateManager.CreateBadgeUpdaterForApplication().Clear();
+			localSettings.Values["numberOfUnreadNotifications"] = 0;
 
 			return rootFrame;
 		}

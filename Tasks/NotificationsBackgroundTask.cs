@@ -10,7 +10,7 @@ using Windows.UI.Notifications;
 
 namespace Tasks
 {
-    public sealed class NotificationsBackgroundTask : IBackgroundTask
+	public sealed class NotificationsBackgroundTask : IBackgroundTask
     {
 		private BackgroundTaskDeferral _deferral;
 
@@ -131,7 +131,23 @@ namespace Tasks
 				// By default, only fetch notifications from the last day
 				lastCheckDateTime = DateTimeOffset.UtcNow.AddDays(-1);
 			}
-			
+
+			// Set up badge notifications
+			int numberOfNotificationsOnBadge;
+			if (localSettings.Values["numberOfUnreadNotifications"] != null)
+			{
+				numberOfNotificationsOnBadge = (int)localSettings.Values["numberOfUnreadNotifications"];
+				if (numberOfNotificationsOnBadge > 100)
+				{
+					numberOfNotificationsOnBadge = 0;
+				}
+			}
+			else
+			{
+				numberOfNotificationsOnBadge = 0;
+			}
+
+			// Variable to set toast and live tile feed titles
 			int j = 0;
 
 			foreach (XmlDocument document in toastRssFeedXmlList)
@@ -253,6 +269,7 @@ namespace Tasks
 
 										DisplayTimestamp = notificationDateTime,
 
+										// Add button to view comments
 										Actions = new ToastActionsCustom()
 										{
 											Buttons =
@@ -275,6 +292,9 @@ namespace Tasks
 										Group = notificationFeedTitle
 									};
 									ToastNotificationManager.CreateToastNotifier().Show(toastNotification);
+
+									// Update number of notifications on the badge
+									numberOfNotificationsOnBadge++;
 								}
 								else
 								{
@@ -289,17 +309,37 @@ namespace Tasks
 				j++;
 			}
 
+			// Then create badges based off of the number of toast notifications
+			// Badge notification code modified from 
+			// https://docs.microsoft.com/en-us/windows/uwp/design/shell/tiles-and-notifications/badges 
+			// under the MIT License. See the Licenses Dialog for the full MIT license.
+			// Get the blank badge XML payload for a badge number
+			XmlDocument badgeXml = BadgeUpdateManager.GetTemplateContent(BadgeTemplateType.BadgeNumber);
+
+			// Set the value of the badge in the XML to the number of Notifications on the badge
+			XmlElement badgeElement = badgeXml.SelectSingleNode("/badge") as XmlElement;
+			badgeElement.SetAttribute("value", numberOfNotificationsOnBadge.ToString());
+
+			// Create the badge notification
+			BadgeNotification badge = new BadgeNotification(badgeXml);
+
+			// Create the badge updater for the application and update the badge
+			BadgeUpdateManager.CreateBadgeUpdaterForApplication().Update(badge);
+			// End badge notification code.
+
+			localSettings.Values["numberOfUnreadNotifications"] = numberOfNotificationsOnBadge;
+
 			// Then Live Tiles
 			foreach (string s in liveTileRssFeedUrls)
 			{
 				liveTileRssFeedXmlList.Add(await XmlDocument.LoadFromUriAsync(new Uri(s)));
 			}
 
-			int k = 0;
+			j = 0;
 
 			foreach (XmlDocument document in liveTileRssFeedXmlList)
 			{
-				notificationFeedTitle = liveTileFeedTitles[k];
+				notificationFeedTitle = liveTileFeedTitles[j];
 
 				foreach (IXmlNode exteriorNode in document.DocumentElement.ChildNodes)
 				{
@@ -487,7 +527,8 @@ namespace Tasks
 						}
 					}
 				}
-				k++;
+
+				j++;
 			}
 
 			// Save last check for updates value
