@@ -67,6 +67,7 @@ namespace WindowsTechnica
 			catch (FormatException)
 			{
 				currentUri = new Uri(FALLBACK_HOME_URL);
+				currentUrl = FALLBACK_HOME_URL;
 			}
 			ArsWebView.Navigate(currentUri);
 
@@ -107,12 +108,20 @@ namespace WindowsTechnica
 					catch (FormatException)
 					{
 						currentUri = new Uri(FALLBACK_HOME_URL);
+						currentUrl = FALLBACK_HOME_URL;
 					}
 				}
 				ArsWebView.Navigate(currentUri);
 			}
 
 			onMainPage = true;
+
+			// Save the current DateTime if showLessNotifications is true
+			if (localSettings.Values["showLessNotifications"] != null &&
+				(bool)localSettings.Values["showLessNotifications"] == true)
+			{
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow;
+			}
 		}
 
 		/// <summary>
@@ -643,6 +652,13 @@ namespace WindowsTechnica
 
 			// Save the current url
 			localSettings.Values["currentUrl"] = currentUrl;
+
+			// Save the current DateTime if showLessNotifications is true
+			if (localSettings.Values["showLessNotifications"] != null && 
+				(bool)localSettings.Values["showLessNotifications"] == true)
+			{
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow;
+			}
 		}
 	}
 }

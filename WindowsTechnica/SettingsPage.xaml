@@ -104,6 +104,8 @@
 					<x:String>3 hours</x:String>
 					<x:String>5 hours</x:String>
 				</ComboBox>
+				<ToggleSwitch x:Name="lessNotificationsToggle" Header="Show less notifications" Margin="0,24,0,0"
+							  IsEnabled="{x:Bind enableNotificationsToggle.IsOn, Mode=OneWay}"/>
 				<HyperlinkButton Content="Windows notification settings" NavigateUri="ms-settings:notifications" 
 								 Margin="0,24,0,0"/>
 

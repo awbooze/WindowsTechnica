@@ -196,7 +196,7 @@ namespace WindowsTechnica
 			ApplicationDataCompositeValue notificationFrequencyCompositeValue = 
 				(ApplicationDataCompositeValue)localSettings.Values["notificationFrequencyComposite"];
 
-			if(notificationFrequencyCompositeValue != null)
+			if (notificationFrequencyCompositeValue != null)
 			{
 				notificationFrequencyComboBox.SelectedIndex = 
 					(int)notificationFrequencyCompositeValue["comboBoxSelectedIndex"];
@@ -205,6 +205,16 @@ namespace WindowsTechnica
 			{
 				// By default, check for notifications once every hour
 				notificationFrequencyComboBox.SelectedIndex = 2;
+			}
+
+			//Initialize "Show less notifications" toggle
+			if(localSettings.Values["showLessNotifications"] != null)
+			{
+				lessNotificationsToggle.IsOn = (bool)localSettings.Values["showLessNotifications"];
+			}
+			else
+			{
+				lessNotificationsToggle.IsOn = false;
 			}
 
 			// Initialize currentUrl setting
@@ -835,13 +845,27 @@ namespace WindowsTechnica
 
 			localSettings.Values["liveTileCheckBoxComposite"] = liveTileCheckBoxComposite;
 
+			// Save "Show less notifications" toggle
+			localSettings.Values["showLessNotifications"] = lessNotificationsToggle.IsOn;
+
 			// Save setting for inline frames in html
 			localSettings.Values["enableIframes"] = enableIframesToggle.IsOn;
 
 			// Save setting for last check for updates
 			try
 			{
-				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.Parse(lastCheckForUpdatesTextBox.Text).ToUniversalTime();
+				DateTimeOffset lastCheckForUpdatesDateTime = DateTimeOffset.Parse(lastCheckForUpdatesTextBox.Text).ToUniversalTime();
+
+				// Save current value or seven days before today, whichever is lesser
+				if ((DateTimeOffset.UtcNow.AddDays(-7) - lastCheckForUpdatesDateTime).TotalDays < 7)
+				{
+					localSettings.Values["lastCheckForUpdatesDateTime"] = lastCheckForUpdatesDateTime;
+				}
+				else
+				{
+					localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow.AddDays(-7);
+				}
+				
 			}
 			catch (ArgumentException)
 			{
