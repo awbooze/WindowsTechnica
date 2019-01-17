@@ -16,7 +16,7 @@ namespace WindowsTechnica
     /// </summary>
     sealed partial class App : Application
     {
-		ApplicationDataContainer localSettings;
+		private ApplicationDataContainer localSettings;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code

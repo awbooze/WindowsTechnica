@@ -24,15 +24,15 @@ namespace WindowsTechnica
 	{
 		private bool onMainPage = true;
 		private const string FALLBACK_HOME_URL = "https://arstechnica.com/";
-		private Uri currentUri;
-		private string currentUrl;
 		private string homeUrl;
-		ApplicationDataContainer localSettings;
+		private string currentUrl;
+		private Uri currentUri;
+		private ApplicationDataContainer localSettings;
 
 		/// <summary>
 		/// The constructor for the main page. Initializes all components, adds a DataRequested method for 
-		/// when the user would like to share the current page, and adds a OnAppSuspending method to save data 
-		/// when the app is being suspended.
+		/// when the user would like to share the current page, adds a OnAppSuspending method to save data 
+		/// when the app is being suspended, and adds a DataChanged method to respond to DataChanged events.
 		/// </summary>
 		public MainPage()
 		{
@@ -75,7 +75,7 @@ namespace WindowsTechnica
 			DataTransferManager.GetForCurrentView().DataRequested += MainPage_DataRequested;
 
 			// Registers an event handler for the DataChanged event as part of initializing notifications
-			ApplicationData.Current.DataChanged += new TypedEventHandler<ApplicationData, object>(Data_Changed);
+			ApplicationData.Current.DataChanged += new TypedEventHandler<ApplicationData, object>(App_DataChanged);
 			if(localSettings.Values["recentlyUpdated"] != null && (bool)localSettings.Values["recentlyUpdated"] == true)
 			{
 				InitializeNotifications(true);
@@ -90,9 +90,17 @@ namespace WindowsTechnica
 			Application.Current.Suspending += new SuspendingEventHandler(OnAppSuspending);
 		}
 
+		/// <summary>
+		/// The method called when this Page is navigated to within a Frame.
+		/// </summary>
+		/// <param name="e">Any arguments provided to this method by the system.</param>
 		protected override void OnNavigatedTo(NavigationEventArgs e)
 		{
-			if(e.Parameter != null && !e.Parameter.ToString().Equals(String.Empty))
+			// Call the super class
+			base.OnNavigatedTo(e);
+
+			// If opened via a notification, this method will have a parameter, which is the page to navigate to
+			if (e.Parameter != null && !e.Parameter.ToString().Equals(String.Empty))
 			{
 				try
 				{
@@ -114,6 +122,7 @@ namespace WindowsTechnica
 				ArsWebView.Navigate(currentUri);
 			}
 
+			// Set onMainPage to true so dialog boxes work correctly
 			onMainPage = true;
 
 			// Save the current DateTime if showLessNotifications is true
@@ -138,13 +147,29 @@ namespace WindowsTechnica
 				AppViewBackButtonVisibility.Visible : AppViewBackButtonVisibility.Collapsed;
 		}
 
-
-		private void Data_Changed(ApplicationData sender, object args)
+		/// <summary>
+		/// The event handler called when another method calls ApplicationData.Current.SignalDataChanged(), 
+		/// which is used in this application to signal that various local settings that control the notification 
+		/// background task, such as whether it is enabled, have changed. This method then calls the 
+		/// InitializeNotifications method with shouldReschedule as true to make sure the current background 
+		/// task reflects the settings set by the user.
+		/// </summary>
+		/// <param name="sender">This application's ApplicationData object.</param>
+		/// <param name="args">Any arguments provided by the event.</param>
+		private void App_DataChanged(ApplicationData sender, object args)
 		{
 			InitializeNotifications(true);
 		}
 
-
+		/// <summary>
+		/// The method which constructs, registers, and unregisters the notification background task, using the 
+		/// settings set by the user and background activity settings set by the Windows System.
+		/// </summary>
+		/// <param name="shouldReschedule">
+		/// Whether the notification task should be rescheduled if it is already scheduled. If this is true, the 
+		/// notification task is unregistered and then re-registered with any new parameters. If this is false, 
+		/// the task is not re-registered and continues to use the same parameters.
+		/// </param>
 		private async void InitializeNotifications(bool shouldReschedule)
 		{
 			//Check if notifications are enabled by the user
@@ -189,7 +214,7 @@ namespace WindowsTechnica
 					notificationsAllowed = true;
 				}
 
-				// Register the background task if it has not already been registered.
+				// Register the background task if it has not already been registered and notifications are allowed
 				if (!notificationTaskRegistered && notificationsAllowed)
 				{
 					BackgroundTaskBuilder builder = new BackgroundTaskBuilder
@@ -199,7 +224,6 @@ namespace WindowsTechnica
 					};
 
 					uint notificationFrequency;
-
 					ApplicationDataCompositeValue notificationFrequencyCompositeValue =
 						(ApplicationDataCompositeValue)localSettings.Values["notificationFrequencyComposite"];
 
@@ -213,6 +237,7 @@ namespace WindowsTechnica
 						notificationFrequency = 60;
 					}
 
+					// Background task will repeat every notificationFrequency minutes and require a network connection
 					builder.SetTrigger(new TimeTrigger(notificationFrequency, false));
 					builder.IsNetworkRequested = true;
 					builder.AddCondition(new SystemCondition(SystemConditionType.InternetAvailable));
@@ -236,6 +261,7 @@ namespace WindowsTechnica
 							CloseButtonText = "Disable notifications"
 						};
 
+						// Add event handlers for various dialog-related events
 						backgroundNotAllowedDialog.Loaded += BackgroundNotAllowedDialog_Loaded;
 						backgroundNotAllowedDialog.PrimaryButtonClick += BackgroundNotAllowedDialog_PrimaryButtonClickAsync;
 						backgroundNotAllowedDialog.CloseButtonClick += BackgroundNotAllowedDialog_CloseButtonClick;
@@ -246,6 +272,7 @@ namespace WindowsTechnica
 			}
 			else
 			{
+				// If notifications aren't enabled by the user, unregister the background task and remove background access
 				foreach (var task in BackgroundTaskRegistration.AllTasks)
 				{
 					if (task.Value.Name.Equals(notificationTaskName))
@@ -263,7 +290,7 @@ namespace WindowsTechnica
 		/// The event handler called when the backgroundNotAllowedDialog is loaded. Used to set the default 
 		/// button for the dialog.
 		/// </summary>
-		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void BackgroundNotAllowedDialog_Loaded(object sender, RoutedEventArgs e)
 		{
@@ -277,7 +304,7 @@ namespace WindowsTechnica
 		/// The event handler called when the primary button of the backgroundNotAllowedDialog is pressed. 
 		/// Launches the settings app to allow the user to alter the background app permission for this app.
 		/// </summary>
-		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private async void BackgroundNotAllowedDialog_PrimaryButtonClickAsync(ContentDialog sender, 
 			ContentDialogButtonClickEventArgs args)
@@ -289,7 +316,7 @@ namespace WindowsTechnica
 		/// The event handler called when the close button of the backgroundNotAllowedDialog is clicked. Used 
 		/// to disable notifications, as the app isn't allowed to fetch them, anyway.
 		/// </summary>
-		/// <param name="sender">The backgroundNotAllowedDialog</param>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void BackgroundNotAllowedDialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
 		{
@@ -549,7 +576,7 @@ namespace WindowsTechnica
 		private void ShareButton_Click(object sender, RoutedEventArgs e)
 		{
 			//Share the current url
-			DataTransferManager.ShowShareUI();                              //Shows share UI
+			DataTransferManager.ShowShareUI();
 		}
 
 		/// <summary>

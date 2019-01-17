@@ -21,12 +21,12 @@ namespace WindowsTechnica
 	/// </summary>
 	public sealed partial class SettingsPage : Page
 	{
-		bool isPageLoad;
-		int theme;
-		int i = 0;
-		CheckBox[] toastCheckBoxes;
-		CheckBox[] liveTileCheckBoxes;
-		ApplicationDataContainer localSettings;
+		private bool isPageLoad;
+		private int theme;
+		private int i = 0;
+		private CheckBox[] toastCheckBoxes;
+		private CheckBox[] liveTileCheckBoxes;
+		private ApplicationDataContainer localSettings;
 
 		/// <summary>
 		/// The constructor for the settings page. Initializes all componenets from XAML, initializes the local 
@@ -292,13 +292,19 @@ namespace WindowsTechnica
 			}
 		}
 
-		
+		/// <summary>
+		/// The event handler called when the enableNotificationsToggle is toggled. It saves the setting 
+		/// to enable notifications and broadcasts that settings data has changed so the background task 
+		/// can be re-registered.
+		/// </summary>
+		/// <param name="sender">The enableNotificationsToggle ToggleSwitch.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
 		private void EnableNotificationsToggle_Toggled(object sender, RoutedEventArgs e)
 		{
 			// If this event handler was not triggered because of a page load ...
 			if (!isPageLoad)
 			{
-				// Save the setting ...
+				// Save the setting
 				localSettings.Values["notificationsEnabled"] = enableNotificationsToggle.IsOn;
 
 				// Broadcast that the settings have changed
@@ -506,7 +512,13 @@ namespace WindowsTechnica
 			}
 		}
 
-
+		/// <summary>
+		/// The event handler called when the notificationFrequencyComboBox selection is changed. It saves the 
+		/// notification frequency setting and broadcasts that settings data has changed so the background task 
+		/// can be re-registered.
+		/// </summary>
+		/// <param name="sender">The notificationFrequencyComboBox ComboBox.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
 		private void NotificationFrequencyComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
 		{ 
 			// If this event handler was not triggered because of a page load ...
@@ -792,6 +804,7 @@ namespace WindowsTechnica
 			// Call the superclass
 			base.OnNavigatingFrom(e);
 
+			// Save local settings
 			SaveLocalSettings();
 		}
 
@@ -856,7 +869,7 @@ namespace WindowsTechnica
 			{
 				DateTimeOffset lastCheckForUpdatesDateTime = DateTimeOffset.Parse(lastCheckForUpdatesTextBox.Text).ToUniversalTime();
 
-				// Save current value or seven days before today, whichever is lesser
+				// Save current value or seven days before today, whichever is lesser.
 				if ((DateTimeOffset.UtcNow.AddDays(-7) - lastCheckForUpdatesDateTime).TotalDays < 7)
 				{
 					localSettings.Values["lastCheckForUpdatesDateTime"] = lastCheckForUpdatesDateTime;
