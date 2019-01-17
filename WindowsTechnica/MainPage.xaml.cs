@@ -513,7 +513,7 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
 		{
-			if (ArsWebView.CanGoBack)
+			if (ArsWebView.CanGoBack && e.Handled == false)
 			{
 				ArsWebView.GoBack();
 				e.Handled = true;

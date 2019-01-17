@@ -117,13 +117,13 @@ namespace WindowsTechnica
 						}
 						break;
 					case "viewArticle":
-						if (!(rootFrame.Content is MainPage))
+						if (args["url"] != null)
 						{
-							if (args["url"] != null)
-							{
-								rootFrame.Navigate(typeof(MainPage), args["url"]);
-							}
-							else
+							rootFrame.Navigate(typeof(MainPage), args["url"]);
+						}
+						else
+						{
+							if (!(rootFrame.Content is MainPage))
 							{
 								rootFrame.Navigate(typeof(MainPage));
 							}
@@ -194,10 +194,17 @@ namespace WindowsTechnica
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
 		{
 			Frame rootFrame = Window.Current.Content as Frame;
-			if (rootFrame.CanGoBack)
+			if (rootFrame.Content is MainPage)
 			{
-				rootFrame.GoBack();
-				e.Handled = true;
+				// Do nothing
+			}
+			else
+			{
+				if (rootFrame.CanGoBack && e.Handled == false)
+				{
+					rootFrame.GoBack();
+					e.Handled = true;
+				}
 			}
 		}
 
