@@ -1,9 +1,11 @@
 ﻿using System;
 using Windows.ApplicationModel;
+using Windows.ApplicationModel.Background;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Foundation.Metadata;
 using Windows.Storage;
+using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -15,38 +17,40 @@ using Windows.UI.Xaml.Navigation;
 
 namespace WindowsTechnica
 {
-    /// <summary>
-    /// The main page of this application. Contains a CommandBar and a WebView.
-    /// </summary>
-    public sealed partial class MainPage : Page
-    {
-        private Uri currentUri;
-        private string currentUrl;
-        private string homeUrl;
-		ApplicationDataContainer localSettings;
+	/// <summary>
+	/// The main page of this application. Contains a CommandBar and a WebView.
+	/// </summary>
+	public sealed partial class MainPage : Page
+	{
+		private bool onMainPage = true;
+		private const string FALLBACK_HOME_URL = "https://arstechnica.com/";
+		private string homeUrl;
+		private string currentUrl;
+		private Uri currentUri;
+		private ApplicationDataContainer localSettings;
 
 		/// <summary>
 		/// The constructor for the main page. Initializes all components, adds a DataRequested method for 
-		/// when the user would like to share the current page, and adds a OnAppSuspending method to save data 
-		/// when the app is being suspended.
+		/// when the user would like to share the current page, adds a OnAppSuspending method to save data 
+		/// when the app is being suspended, and adds a DataChanged method to respond to DataChanged events.
 		/// </summary>
 		public MainPage()
-        {
-            InitializeComponent();
+		{
+			InitializeComponent();
 
 			// Gets local settings to initialize the webview to the correct page.
 			localSettings = ApplicationData.Current.LocalSettings;
-			object tempHome = localSettings.Values["homeUrl"];
+			var tempHome = localSettings.Values["homeUrl"];
 			if (tempHome == null)
 			{
-				homeUrl = "https://arstechnica.com/";
+				homeUrl = FALLBACK_HOME_URL;
 			}
 			else
 			{
 				homeUrl = (string)tempHome;
 			}
 
-			object tempUrl = localSettings.Values["currentUrl"];
+			var tempUrl = localSettings.Values["currentUrl"];
 			if (tempUrl == null)
 			{
 				currentUrl = homeUrl;
@@ -56,14 +60,77 @@ namespace WindowsTechnica
 				currentUrl = (string)tempUrl;
 			}
 
-			currentUri = new Uri(currentUrl);
+			try
+			{
+				currentUri = new Uri(currentUrl);
+			}
+			catch (FormatException)
+			{
+				currentUri = new Uri(FALLBACK_HOME_URL);
+				currentUrl = FALLBACK_HOME_URL;
+			}
 			ArsWebView.Navigate(currentUri);
 
 			// Overrides data requested method to share the current page
 			DataTransferManager.GetForCurrentView().DataRequested += MainPage_DataRequested;
 
-			// Adds an event handler that is called when the app is suspending.
+			// Registers an event handler for the DataChanged event as part of initializing notifications
+			ApplicationData.Current.DataChanged += new TypedEventHandler<ApplicationData, object>(App_DataChanged);
+			if(localSettings.Values["recentlyUpdated"] != null && (bool)localSettings.Values["recentlyUpdated"] == true)
+			{
+				InitializeNotifications(true);
+				localSettings.Values["recentlyUpdated"] = false;
+			}
+			else
+			{
+				InitializeNotifications(false);
+			}
+			
+			// Adds an event handler that is called when the app is suspending
 			Application.Current.Suspending += new SuspendingEventHandler(OnAppSuspending);
+		}
+
+		/// <summary>
+		/// The method called when this Page is navigated to within a Frame.
+		/// </summary>
+		/// <param name="e">Any arguments provided to this method by the system.</param>
+		protected override void OnNavigatedTo(NavigationEventArgs e)
+		{
+			// Call the super class
+			base.OnNavigatedTo(e);
+
+			// If opened via a notification, this method will have a parameter, which is the page to navigate to
+			if (e.Parameter != null && !e.Parameter.ToString().Equals(String.Empty))
+			{
+				try
+				{
+					currentUri = new Uri(e.Parameter.ToString());
+					currentUrl = e.Parameter.ToString();
+				}
+				catch (FormatException)
+				{
+					try
+					{
+						currentUri = new Uri(currentUrl);
+					}
+					catch (FormatException)
+					{
+						currentUri = new Uri(FALLBACK_HOME_URL);
+						currentUrl = FALLBACK_HOME_URL;
+					}
+				}
+				ArsWebView.Navigate(currentUri);
+			}
+
+			// Set onMainPage to true so dialog boxes work correctly
+			onMainPage = true;
+
+			// Save the current DateTime if showLessNotifications is true
+			if (localSettings.Values["showLessNotifications"] != null &&
+				(bool)localSettings.Values["showLessNotifications"] == true)
+			{
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow;
+			}
 		}
 
 		/// <summary>
@@ -81,14 +148,190 @@ namespace WindowsTechnica
 		}
 
 		/// <summary>
+		/// The event handler called when another method calls ApplicationData.Current.SignalDataChanged(), 
+		/// which is used in this application to signal that various local settings that control the notification 
+		/// background task, such as whether it is enabled, have changed. This method then calls the 
+		/// InitializeNotifications method with shouldReschedule as true to make sure the current background 
+		/// task reflects the settings set by the user.
+		/// </summary>
+		/// <param name="sender">This application's ApplicationData object.</param>
+		/// <param name="args">Any arguments provided by the event.</param>
+		private void App_DataChanged(ApplicationData sender, object args)
+		{
+			InitializeNotifications(true);
+		}
+
+		/// <summary>
+		/// The method which constructs, registers, and unregisters the notification background task, using the 
+		/// settings set by the user and background activity settings set by the Windows System.
+		/// </summary>
+		/// <param name="shouldReschedule">
+		/// Whether the notification task should be rescheduled if it is already scheduled. If this is true, the 
+		/// notification task is unregistered and then re-registered with any new parameters. If this is false, 
+		/// the task is not re-registered and continues to use the same parameters.
+		/// </param>
+		private async void InitializeNotifications(bool shouldReschedule)
+		{
+			//Check if notifications are enabled by the user
+			bool notificationsEnabled = false;
+
+			if (localSettings.Values["notificationsEnabled"] != null)
+			{
+				notificationsEnabled = (bool)localSettings.Values["notificationsEnabled"];
+			}
+
+			bool notificationTaskRegistered = false;
+			string notificationTaskName = "NotificationsBackgroundTask";
+
+			// If notifications enabled, deal with setting up the background task
+			if (notificationsEnabled)
+			{
+				// Figure out whether notification background task is active and don't re-register it unless 
+				// some settings have changed to make it necessary to re-register
+				foreach (var task in BackgroundTaskRegistration.AllTasks)
+				{
+					if (task.Value.Name.Equals(notificationTaskName))
+					{
+						if(shouldReschedule)
+						{
+							task.Value.Unregister(true);
+							BackgroundExecutionManager.RemoveAccess();
+						}
+						else
+						{
+							notificationTaskRegistered = true;
+						}
+						break;
+					}
+				}
+
+				// Get the background access status
+				BackgroundAccessStatus backgroundAccessStatus = await BackgroundExecutionManager.RequestAccessAsync();
+				bool notificationsAllowed = false;
+				if (backgroundAccessStatus == BackgroundAccessStatus.AlwaysAllowed ||
+					backgroundAccessStatus == BackgroundAccessStatus.AllowedSubjectToSystemPolicy)
+				{
+					notificationsAllowed = true;
+				}
+
+				// Register the background task if it has not already been registered and notifications are allowed
+				if (!notificationTaskRegistered && notificationsAllowed)
+				{
+					BackgroundTaskBuilder builder = new BackgroundTaskBuilder
+					{
+						Name = notificationTaskName,
+						TaskEntryPoint = "Tasks." + notificationTaskName
+					};
+
+					uint notificationFrequency;
+					ApplicationDataCompositeValue notificationFrequencyCompositeValue =
+						(ApplicationDataCompositeValue)localSettings.Values["notificationFrequencyComposite"];
+
+					if (notificationFrequencyCompositeValue != null)
+					{
+						notificationFrequency = Convert.ToUInt32((int)notificationFrequencyCompositeValue["notificationFrequency"]);
+					}
+					else
+					{
+						// Default to checking for notifications once every hour
+						notificationFrequency = 60;
+					}
+
+					// Background task will repeat every notificationFrequency minutes and require a network connection
+					builder.SetTrigger(new TimeTrigger(notificationFrequency, false));
+					builder.IsNetworkRequested = true;
+					builder.AddCondition(new SystemCondition(SystemConditionType.InternetAvailable));
+
+					BackgroundTaskRegistration task = builder.Register();
+				}
+				else if (!notificationsAllowed)
+				{
+					// Display a dialog box that states that the app can't run in the background, 
+					// so notifications won't work, only if the user is on the main page and notifications 
+					// are enabled in the first place.
+					if(onMainPage)
+					{
+						ContentDialog backgroundNotAllowedDialog = new ContentDialog()
+						{
+							Title = "Background Activity not allowed",
+							Content = "It seems that Windows is not allowing Windows Technica to run in the background. " +
+										"This means you will not get any notifications. If you want to get notifications, change " +
+										"the background app setting for Windows Technica.",
+							PrimaryButtonText = "Check Windows settings",
+							CloseButtonText = "Disable notifications"
+						};
+
+						// Add event handlers for various dialog-related events
+						backgroundNotAllowedDialog.Loaded += BackgroundNotAllowedDialog_Loaded;
+						backgroundNotAllowedDialog.PrimaryButtonClick += BackgroundNotAllowedDialog_PrimaryButtonClickAsync;
+						backgroundNotAllowedDialog.CloseButtonClick += BackgroundNotAllowedDialog_CloseButtonClick;
+
+						await backgroundNotAllowedDialog.ShowAsync();
+					}
+				}
+			}
+			else
+			{
+				// If notifications aren't enabled by the user, unregister the background task and remove background access
+				foreach (var task in BackgroundTaskRegistration.AllTasks)
+				{
+					if (task.Value.Name.Equals(notificationTaskName))
+					{
+						task.Value.Unregister(true);
+						break;
+					}
+				}
+
+				BackgroundExecutionManager.RemoveAccess();
+			}
+		}
+
+		/// <summary>
+		/// The event handler called when the backgroundNotAllowedDialog is loaded. Used to set the default 
+		/// button for the dialog.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private void BackgroundNotAllowedDialog_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (ApiInformation.IsPropertyPresent("Windows.UI.Xaml.Controls.ContentDialog", "DefaultButton"))
+			{
+				((ContentDialog)sender).DefaultButton = ContentDialogButton.Primary;
+			}
+		}
+
+		/// <summary>
+		/// The event handler called when the primary button of the backgroundNotAllowedDialog is pressed. 
+		/// Launches the settings app to allow the user to alter the background app permission for this app.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private async void BackgroundNotAllowedDialog_PrimaryButtonClickAsync(ContentDialog sender, 
+			ContentDialogButtonClickEventArgs args)
+		{
+			await Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures-app"));
+		}
+
+		/// <summary>
+		/// The event handler called when the close button of the backgroundNotAllowedDialog is clicked. Used 
+		/// to disable notifications, as the app isn't allowed to fetch them, anyway.
+		/// </summary>
+		/// <param name="sender">The backgroundNotAllowedDialog.</param>
+		/// <param name="e">Any arguments provided by the event.</param>
+		private void BackgroundNotAllowedDialog_CloseButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+		{
+			localSettings.Values["notificationsEnabled"] = false;
+		}
+
+		/// <summary>
 		/// A helper method for converting a URI to a string.
 		/// </summary>
 		/// <param name="uri">The URI to convert to a string.</param>
 		/// <returns>A string representing this URI.</returns>
 		static string UriToString(Uri uri)
-        {
-            return (uri != null) ? uri.ToString() : "";
-        }
+		{
+			return (uri != null) ? uri.ToString() : "";
+		}
 
 		/// <summary>
 		/// The event handler called when ArsWebView begins navigating to a new page.
@@ -97,9 +340,9 @@ namespace WindowsTechnica
 		/// The WebView which has started navigating to a new page. In this case, it will always be ArsWebView.
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
-        private void ArsWebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
-        {
-			if(IsAllowedUri(args.Uri))
+		private void ArsWebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
+		{
+			if (IsAllowedUri(args.Uri))
 			{
 				// If the page is allowed, show the progress bar and let the WebView load the page
 				ArsProgressBar.ShowPaused = false;
@@ -109,10 +352,10 @@ namespace WindowsTechnica
 			{
 				// Otherwise, the link is not for a page on Ars, so launch the system-provided browser and stop 
 				// loading it in the WebView
-				IAsyncOperation<bool> b = Windows.System.Launcher.LaunchUriAsync(args.Uri);
+				IAsyncOperation<bool> b = Launcher.LaunchUriAsync(args.Uri);
 				args.Cancel = true;
 			}
-        }
+		}
 
 		/// <summary>
 		/// Checks if the WebView is allowed to load the provided URI. If it is an Ars Technica URL, then the WebView 
@@ -122,7 +365,7 @@ namespace WindowsTechnica
 		/// <returns>True if the URI is related to Ars Technica and false if it is not</returns>
 		private bool IsAllowedUri(Uri uri)
 		{
-			if(uri.Host.Contains("arstechnica.com"))
+			if (uri.Host.Contains("arstechnica.com"))
 			{
 				return true;
 			}
@@ -153,13 +396,13 @@ namespace WindowsTechnica
 			if (ArsWebView.CanGoBack)
 			{
 				BackButton.IsEnabled = true;
-				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = 
+				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
 					AppViewBackButtonVisibility.Visible;
 			}
 			else
 			{
 				BackButton.IsEnabled = false;
-				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility = 
+				SystemNavigationManager.GetForCurrentView().AppViewBackButtonVisibility =
 					AppViewBackButtonVisibility.Collapsed;
 			}
 
@@ -181,7 +424,7 @@ namespace WindowsTechnica
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
 		private void ArsWebView_NavigationCompleted(WebView sender, WebViewNavigationCompletedEventArgs args)
-        {
+		{
 			// Hide the progress bar
 			ArsProgressBar.Visibility = Visibility.Collapsed;
 			ArsProgressBar.ShowPaused = true;
@@ -200,10 +443,10 @@ namespace WindowsTechnica
 		/// The WebView which has tried to open unviewable content. In this case, it will always be ArsWebView.
 		/// </param>
 		/// <param name="args">Any arguments provided by the event.</param>
-		private void ArsWebView_UnviewableContentIdentified(WebView sender, 
+		private void ArsWebView_UnviewableContentIdentified(WebView sender,
 			WebViewUnviewableContentIdentifiedEventArgs args)
 		{
-			IAsyncOperation<bool> b = Windows.System.Launcher.LaunchUriAsync(args.Uri);
+			IAsyncOperation<bool> b = Launcher.LaunchUriAsync(args.Uri);
 			ArsWebView.Stop();
 		}
 
@@ -270,7 +513,7 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
 		{
-			if (ArsWebView.CanGoBack)
+			if (ArsWebView.CanGoBack && e.Handled == false)
 			{
 				ArsWebView.GoBack();
 				e.Handled = true;
@@ -283,12 +526,12 @@ namespace WindowsTechnica
 		/// <param name="sender">The back button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void BackButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ArsWebView.CanGoBack)
-            {
-                ArsWebView.GoBack();
-            }
-        }
+		{
+			if (ArsWebView.CanGoBack)
+			{
+				ArsWebView.GoBack();
+			}
+		}
 
 		/// <summary>
 		/// The event handler called when the forward button is clicked.
@@ -296,12 +539,12 @@ namespace WindowsTechnica
 		/// <param name="sender">The forward button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void ForwardButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (ArsWebView.CanGoForward)
-            {
-                ArsWebView.GoForward();
-            }
-        }
+		{
+			if (ArsWebView.CanGoForward)
+			{
+				ArsWebView.GoForward();
+			}
+		}
 
 		/// <summary>
 		/// The event handler called when the home button is clicked.
@@ -309,10 +552,10 @@ namespace WindowsTechnica
 		/// <param name="sender">The home button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void HomeButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			Uri targetUri = new Uri(homeUrl);
 			ArsWebView.Navigate(targetUri);
-        }
+		}
 
 		/// <summary>
 		/// The event handler called when the refresh button is clicked.
@@ -320,10 +563,10 @@ namespace WindowsTechnica
 		/// <param name="sender">The refresh button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void RefreshButton_Click(object sender, RoutedEventArgs e)
-        {
-            //Refresh the webpage
-            ArsWebView.Refresh();
-        }
+		{
+			//Refresh the webpage
+			ArsWebView.Refresh();
+		}
 
 		/// <summary>
 		/// The event handler called when the share button is clicked.
@@ -331,9 +574,9 @@ namespace WindowsTechnica
 		/// <param name="sender">The share button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void ShareButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			//Share the current url
-			DataTransferManager.ShowShareUI();								//Shows share UI
+			DataTransferManager.ShowShareUI();
 		}
 
 		/// <summary>
@@ -354,11 +597,11 @@ namespace WindowsTechnica
 		/// <param name="sender">The copy button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void CopyButton_Click(object sender, RoutedEventArgs e)
-        {
-            //Copy the current url to the clipboard
-            CopyToClipboard(currentUrl, currentUri);
-            FlyoutBase.ShowAttachedFlyout(CopyButton);
-        }
+		{
+			//Copy the current url to the clipboard
+			CopyToClipboard(currentUrl, currentUri);
+			FlyoutBase.ShowAttachedFlyout(CopyButton);
+		}
 
 		/// <summary>
 		/// Copies the current URI to the clipboard.
@@ -382,15 +625,15 @@ namespace WindowsTechnica
 		/// <param name="sender">The settings button on the CommandBar.</param>
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void SettingsButton_Click(object sender, RoutedEventArgs e)
-        {
+		{
 			//Open the settings screen
 			Frame.Navigate(typeof(SettingsPage));
 		}
 
 		private void ShareFlyoutItem_Click(object sender, RoutedEventArgs e)
-        {
-            //Share target of hit test
-        }
+		{
+			//Share target of hit test
+		}
 
 		private void CopyFlyoutItem_Click(object sender, RoutedEventArgs e)
 		{
@@ -403,7 +646,13 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		protected override void OnNavigatingFrom(NavigatingCancelEventArgs e)
 		{
-			localSettings.Values["currentUrl"] = currentUrl;
+			// Call the superclass
+			base.OnNavigatingFrom(e);
+
+			// Save local settings
+			SaveLocalSettings();
+
+			onMainPage = false;
 		}
 
 		/// <summary>
@@ -414,8 +663,29 @@ namespace WindowsTechnica
 		/// <param name="e">Any arguments provided by the event.</param>
 		private void OnAppSuspending(object sender, SuspendingEventArgs e)
 		{
+			// Save local settings
+			var deferral = e.SuspendingOperation.GetDeferral();
+			SaveLocalSettings();
+			deferral.Complete();
+		}
+
+		/// <summary>
+		/// A method called by both OnNavigatingFrom and OnAppSuspending to save settings values to LocalSettings.
+		/// </summary>
+		private void SaveLocalSettings()
+		{
+			// Save the home url
 			localSettings.Values["homeUrl"] = homeUrl;
+
+			// Save the current url
 			localSettings.Values["currentUrl"] = currentUrl;
+
+			// Save the current DateTime if showLessNotifications is true
+			if (localSettings.Values["showLessNotifications"] != null && 
+				(bool)localSettings.Values["showLessNotifications"] == true)
+			{
+				localSettings.Values["lastCheckForUpdatesDateTime"] = DateTimeOffset.UtcNow;
+			}
 		}
 	}
 }

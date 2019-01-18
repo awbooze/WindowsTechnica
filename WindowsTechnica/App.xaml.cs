@@ -16,7 +16,7 @@ namespace WindowsTechnica
     /// </summary>
     sealed partial class App : Application
     {
-		ApplicationDataContainer localSettings;
+		private ApplicationDataContainer localSettings;
 
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
@@ -29,19 +29,27 @@ namespace WindowsTechnica
 
 			// Get the theme from settings and change the app theme to the correct theme.
 			localSettings = ApplicationData.Current.LocalSettings;
-			int theme = (int)localSettings.Values["Theme"];
+			if(localSettings.Values["Theme"] != null)
+			{
+				int theme = (int)localSettings.Values["Theme"];
 
-			if (theme == 0)
-			{
-				// The default theme, so I don't need to request it.
-			}
-			else if (theme == 1)
-			{
-				RequestedTheme = ApplicationTheme.Light;
+				if (theme == 0)
+				{
+					// The default theme, so the app doesn't need to request it.
+				}
+				else if (theme == 1)
+				{
+					RequestedTheme = ApplicationTheme.Light;
+				}
+				else
+				{
+					RequestedTheme = ApplicationTheme.Dark;
+				}
 			}
 			else
 			{
-				RequestedTheme = ApplicationTheme.Dark;
+				// Save the default theme so that it initializes correctly next time.
+				localSettings.Values["Theme"] = 0;
 			}
 		}
 
@@ -95,18 +103,33 @@ namespace WindowsTechnica
 				switch (args["action"])
 				{
 					case "viewSettings":
-						if(!(rootFrame.Content is SettingsPage))
+						if (!(rootFrame.Content is SettingsPage))
 						{
 							rootFrame.Navigate(typeof(SettingsPage));
+
+							// If we're loading the Settings page for the first time, place the main page on
+							// the back stack so that user can go back after they've been
+							// navigated to the specific page
+							if (rootFrame.BackStack.Count == 0)
+							{
+								rootFrame.BackStack.Add(new PageStackEntry(typeof(MainPage), null, null));
+							}
+						}
+						break;
+					case "viewArticle":
+						if (args["url"] != null)
+						{
+							rootFrame.Navigate(typeof(MainPage), args["url"]);
+						}
+						else
+						{
+							if (!(rootFrame.Content is MainPage))
+							{
+								rootFrame.Navigate(typeof(MainPage));
+							}
 						}
 						break;
 				}
-
-				// If we're loading the app for the first time, place the main page on
-				// the back stack so that user can go back after they've been
-				// navigated to the specific page
-				if (rootFrame.BackStack.Count == 0)
-					rootFrame.BackStack.Add(new PageStackEntry(typeof(MainPage), null, null));
 			}
 
 			// TODO: Handle other types of activation, such as links.
@@ -152,10 +175,13 @@ namespace WindowsTechnica
 			}
 
 			// Assume that the user has interacted with content that they have been notified about or does not 
-			// care to do so, so clear all live tile notifications.
+			// care to do so, so clear all live tile notifications and badge notifications.
 			TileUpdater tileUpdater = TileUpdateManager.CreateTileUpdaterForApplication();
 			tileUpdater.EnableNotificationQueue(true);
 			tileUpdater.Clear();
+
+			BadgeUpdateManager.CreateBadgeUpdaterForApplication().Clear();
+			localSettings.Values["numberOfUnreadNotifications"] = 0;
 
 			return rootFrame;
 		}
@@ -168,10 +194,17 @@ namespace WindowsTechnica
 		private void OnBackRequested(object sender, BackRequestedEventArgs e)
 		{
 			Frame rootFrame = Window.Current.Content as Frame;
-			if (rootFrame.CanGoBack)
+			if (rootFrame.Content is MainPage)
 			{
-				rootFrame.GoBack();
-				e.Handled = true;
+				// Do nothing
+			}
+			else
+			{
+				if (rootFrame.CanGoBack && e.Handled == false)
+				{
+					rootFrame.GoBack();
+					e.Handled = true;
+				}
 			}
 		}
 
@@ -207,9 +240,9 @@ namespace WindowsTechnica
         /// <param name="e">Details about the suspend request.</param>
         private void OnSuspending(object sender, SuspendingEventArgs e)
         {
-            var deferral = e.SuspendingOperation.GetDeferral();
+            //var deferral = e.SuspendingOperation.GetDeferral();
             //TODO: Save application state and stop any background activity
-            deferral.Complete();
+            //deferral.Complete();
         }
     }
 }
